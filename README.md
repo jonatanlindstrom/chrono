@@ -73,7 +73,7 @@ Start: 2013-06-01
 [2013-08-01]
 Employment: 50 %
 ```
-### year-month.report
+### year-month.txt
 Format:
 * One row per work day.
 * Order: date, ([S | V] | [start_time end_time lunch_time [deviation]]) [comment]
