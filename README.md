@@ -76,7 +76,7 @@ Employment: 50 %
 ### year-month.txt
 Format:
 * One row per work day.
-* Order: date, ([S | V] | [start_time end_time lunch_time [deviation]]) [comment]
+* Order: date, ([S | V] | [start_time lunch_time end_time [deviation]]) [comment]
 * Date is one or two digits followed by period.
 * Time is expressed in 24-hour format.
 * Colon or period can seperate hours from minutes (8:00 or 8.00)
@@ -85,11 +85,11 @@ Format:
 
 Example:
 ```
-3. 8:05 17:00 1:00
+3. 8:05 1:00 17:00
 4. S "Hemma, feber"
-5. 8:20 17:30 0:30 "Lunchmöte"
-6. 8:00 17:19 1:00 -1:00 "Gjorde ärende på stan på eftermiddagen."
-7. 7:30 16:30 0:50
+5. 8:20 0:30 17:30 "Lunchmöte"
+6. 8:00 1:00 17:19 -1:00 "Gjorde ärende på stan på eftermiddagen."
+7. 7:30 0:50 16:30
 8. V "Ledig fredag"
-11. 9:00 17:00 1:00
+11. 9:00 1:00 17:00
 ```
