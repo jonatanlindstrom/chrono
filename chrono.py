@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""Usage: chrono.py ( ls | setup | report | edit)
+"""Usage: chrono.py ( ls | setup | report | edit) [-c]
        chrono.py -h | --help
 
 Displays amra files with or without masks.
@@ -14,6 +14,7 @@ Arguments:
 
 Options:
   -h --help                    Print this message.
+  -c --color                   Prints whith color
 """
 
 from docopt import docopt
@@ -22,10 +23,14 @@ import os
 import calendar as cal
 import datetime
 import re
+import glob
 
 def main():
     arguments = docopt(__doc__)
     chrono = Chrono()
+    if arguments['--color']:
+        chrono.settings['color'] = True
+    
     if arguments['ls']:
         chrono.list_reports()
     elif arguments['report']:
@@ -38,16 +43,19 @@ def main():
 class Chrono(object):
     
     def __init__(self):
-        if not os.path.isfile("~/.chrono"):
+        if not os.path.isfile(os.path.expanduser("~/.chrono")):
             settings = {}
-            settings["chronopath"] = "/Users/jonatan/Dropbox/AMRA/chrono/"
+            settings["chronopath"] = os.path.expanduser("~/chrono/")
             self.write_dot_file(settings)
         self.settings = self.read_dot_file()
-        
-        # This is a hack. Later, similar info should be derived from the
-        # computers clock and from files present in the chrono folder.
-        self.current_month = 6
-        self.current_year = 2013
+
+        self.user = self.create_user()
+        self.months = []
+        self.calendar = {}
+        self.report_archive = Archive()
+
+        self.read_year_conf()
+        self.read_report_files()
         
     def write_dot_file(self, settings):
         dot_file = open(os.path.expanduser("~/.chrono.tmp"), "w")
@@ -63,45 +71,152 @@ class Chrono(object):
             delimiter_pos = line.find(":")
             key = line[0:delimiter_pos].strip()
             value = line[delimiter_pos + 1:].strip()
+            
+            if value.lower() == "true":
+                value = True
+            elif value.lower() == "false":
+                value = False
+            
             settings[key] = value
         return settings
+    
+    def read_year_conf(self):
+        months = ["JANUARY", "FEBRUARY", "MARCH", "APRIL",
+                  "MAY", "JUNE", "JULY",
+                  "AUGUST", "SEPTEMBER",
+                  "OCTOBER", "NOVEMBER", "DECEMBER"]
+        year_files = glob.glob(os.path.join(self.settings["chronopath"], "20[0-9][0-9].conf"))
+        for year_file in year_files:
+            year = int(os.path.splitext(os.path.split(year_file)[1])[0])
+            self.calendar[year] = {}
 
-    def list_reports(self):
+            month = None
+            f = open(year_file, "r")
+            for line in f.readlines():
+                # Parse comment which is only allowed last
+                m = _comment_pattern.search(line)
+                if m:
+                    if m.group(2):
+                        comment = m.group(2)
+                    elif m.group(5):
+                        comment = m.group(5)
+                    line = _comment_pattern.sub(' ', line)
+                else:
+                    comment = ""
+                                
+                tokens = line.strip().split()
+                if len(tokens) == 1 and tokens[0].upper() in months:
+                    month = months.index(tokens[0].upper()) + 1
+                    self.calendar[year][month] = {}
+                elif month and tokens:
+
+                    # Parse date
+                    if tokens[0].find(".") == -1:
+                        raise Exception("Line must start with a date in the form '1.'.")
+                    date = int(tokens.pop(0)[:-1])
+                    
+                    new_holiday = CalendarDay(datetime.date(year, month, date))
+                    new_holiday.type = DayType.HOLIDAY
+                    new_holiday.comment = comment
+                    
+                    # Parse deviating work hours (optional)
+                    if tokens and len(tokens) == 1:
+                        new_holiday.hours = make_timedelta(tokens.pop())
+                    elif tokens:
+                        raise Exception("Line has too many elements.")
+                    
+                    self.calendar[year][month][date] = new_holiday
+                elif tokens:
+                    raise Exception("Unknown month for entry.")
+    
+    def create_user(self):
+        new_user = User()
+        return new_user
+    
+    def read_report_files(self):
+        month_reports = glob.glob(os.path.join(self.settings["chronopath"], "20[0-9][0-9]-[0-1][0-9].txt"))
+        
+        for month_report in month_reports:
+            file = os.path.split(month_report)[1]
+            year = int(file[0:4])
+            month = int(file[5:7])
+            new_month = Month(month, year)
+            new_month.add_calendar(self.calendar[year][month])
+
+            f = open(month_report, "r")
+            for line in f.readlines():
+                new_day = DayReport()
+                new_day.parse_string(line, month, year)
+                new_month.add_report(new_day)
+            
+            self.months.append(new_month)        
+
+    def list_reports(self, filter=""):
         """
         Prints out a report in the terminal for the current month. Future
         implementation should allow more flexible output that can be configured
         in the .chrono file.
         """
-        path = os.path.join(self.settings["chronopath"], "2013-06.txt")
-        f = open(path, "r")
-        month = Month(6, 2013)
-        months = []
-        months.append(month)
-        archive = Archive()
-        for line in f.readlines():
-            new_day = Day()
-            new_day.parse_string(line, self.current_month, self.current_year)
-            month.add_day(new_day)
-        print "\nReports for %s %s" % (cal.month_name[6], 2013)
-        print "-----"
-        print """ Day   S/V   Start   Lunch    End    Hours   Comments"""
-        for day in month.all_days():
-            print "%s%s%s%s%s%s%s" % ((str(day.start.day) + ".").center(6),
-                                           "?".center(6),
-                                           day.start.strftime("%H:%M").center(8),
-                                           pretty_timedelta(day.lunch).center(8) if day.lunch else "".center(8),
-                                           day.end.strftime("%H:%M").center(8) if day.end else "".center(8),
-                                           pretty_timedelta(day.hours).center(8) if day.hours else "".center(8),
-                                           day.comment if day.comment else "".center(8) )
+
+        # TODO:
+        # - implement filter
+        
         total_flex = datetime.timedelta()
-        for mon in months:
-            total_flex += mon.calculate_flex()
-        print """-----
-Flex for %s: %s
-Total flex: %s
-""" % (cal.month_name[6],
-       pretty_timedelta(month.calculate_flex()),
-       pretty_timedelta(month.calculate_flex() + archive.calculate_flex()))
+        today = datetime.date.today()
+        
+        for month in self.months:
+            print "\n%s %s" % (cal.month_name[month.month], month.year)
+            print "%s" % ("-" * 80)
+            print """            Start   Lunch    End    Hours"""
+            print "%s+%s+%s" % ("-" * 8, "-" * 35, "-" * 35)
+            for date, day in month.calendar.items():
+                if (today.month < month.month or
+                    today.month == month.month and today < day.date):
+                         break
+                weekday = cal.weekday(month.year, month.month, date)
+            
+                day_string = "%s %s. |" % (cal.day_abbr[weekday], str(date).rjust(2))
+                
+                if date in month.reports:
+                    report = month.reports[date]
+                    day.type = report.type
+                    day.comment = report.comment
+                    
+                    if day.type == DayType.WEEKDAY:
+                        if report.start:
+                            day_string += "   %s" % pretty_time(report.start)
+
+                        if report.lunch:
+                            day_string += "   %s" % pretty_timedelta(report.lunch).rjust(5)
+
+                        if report.end:
+                            day_string += "   %s   %s   |" % (pretty_time(report.end), pretty_timedelta(report.hours).rjust(5))
+                    
+                    else:
+                        day_string += "%s|" % (" " * 35)
+                        day.comment = "%s. %s" % (DayType.pretty_keys[day.type], day.comment)
+                        #day_string += "   %s   |" % DayType.pretty_keys[day.type].center(29)
+                elif day.type == DayType.WEEKEND or day.type == DayType.HOLIDAY:
+                    day_string += "                                   |"
+                if day.comment:
+                    day_string += "   %s" % day.comment.ljust(29)
+
+                padding = 80 - len(day_string.decode("utf-8"))
+                day_string += "%s" % (padding * " ")
+                if self.settings['color']:
+                    print DayType.colors[day.type] + day_string + AnsiColors.ENDC
+                else:
+                    print day_string
+                    
+                    
+                    
+            flex = month.calculate_flex()
+            total_flex += flex
+            print "%s+%s+%s" % ("-" * 8, "-" * 35, "-" * 35)
+            print """           Flex for %s: %s""" % (cal.month_name[month.month], pretty_timedelta(flex))
+            print "%s" % ("-" * 80)
+    
+        print "\nTotal flex: %s" % (pretty_timedelta(total_flex + self.report_archive.calculate_flex()))
     
     def new_report(self):
         """
@@ -119,106 +234,191 @@ Total flex: %s
     def setup(self):
         print "SETUP"
 
+class User(object):
+    """Class representing a user i.e. an employee"""
+    
+    def __init__(self):
+        self.name = ""
+        self.id = ""
+        self.employment = 0
+        self.vacation = 0
+        
 class Archive(object):
     """
     Class representing all archived days
     """
     def __init__(self):
-        self.days = []
+        self.reports = {}
 
     def calculate_flex(self):
         flex = datetime.timedelta()
-        for day in self.days:
+        for date, day in self.reports.items():
             if day.hours:
-                flex += (day.hours - self.standard_hours[day.day])
+                flex += (day.hours - self.standard_hours[day.reports])
         return flex
-        
+ 
 class Month(object):
     """Class representing a month"""
     def __init__(self, month, year):
-        self.first_day = None
-        self.last_day = None
-        self.days = []
-        calendar = cal.Calendar()
-        self.standard_hours = [0] * (cal.monthrange(year, month)[1] + 1)
-        for date, weekday in calendar.itermonthdays2(year, month):
-            if date:
-                if weekday < 6:
-                    self.standard_hours[date] = datetime.timedelta(hours=8)
-        #print self.standard_hours
-        #print calendar.monthdayscalendar(year, month)
-        # TODO:
-        # - Calculate work days for month including information from year
-        #   configuration file.
+        self.year = year
+        self.month = month
+
+        self.reports = {}
+        self.calendar = {}
+        
+        for date in cal.Calendar().itermonthdates(year, month):
+            if date.month == month:
+                new_date = CalendarDay(date)
+                if date.weekday() < 5:
+                    new_date.standard_hours = datetime.timedelta(hours=8)
+                    new_date.type = DayType.WEEKDAY
+                else:
+                    new_date.type = DayType.WEEKEND
+                self.calendar[date.day] = new_date
     
-    def add_day(self, day):
-        self.days.append(day)
+    def weekends_up_to_date(self, day):
+        weekends = []
+        for date, weekday in cal.Calendar().itermonthdays2(self.year, self.month):
+            if date > 0 and date <= day and weekday in [5, 6]:
+                new_day = DayReport(date)
+                new_day.type = DayType.WEEKEND
+                weekends.append(new_day)
+        return weekends
     
+    def add_calendar(self, calendar):
+        for date, day in calendar.items():
+            self.calendar[date].standard_hours = day.standard_hours
+            self.calendar[date].type = day.type
+            self.calendar[date].comment = day.comment
+    
+    def add_report(self, day_report):
+        self.reports[day_report.date] = day_report
+
+    def holidays_up_to_date(self, day):
+        holidays = []
+        
+        return holidays
     
     def calculate_flex(self):
         flex = datetime.timedelta()
-        for day in self.days:
+        for date, day in self.reports.items():
             if day.hours:
-                flex += (day.hours - self.standard_hours[day.day])
+                flex += (day.hours - self.calendar[date].standard_hours)
         return flex
     
     def all_days(self):
-        
-        return self.days
+        # todo:
+        # add weekends and holidays
+        all_days = self.reports[:]
+        all_days += self.holidays_up_to_date(datetime.date.today().date)
+        all_days += self.weekends_up_to_date(datetime.date.today().date)
+        all_days.sort(key=lambda x: x.date)
+        return all_days
+
+class AnsiColors:
+    WHITE = '\033[97m'
+    RED = '\033[91m'
+    GREEN = '\033[92m'
+    BLUE = '\033[94m'
+    CYAN = '\033[96m'
+    MAGENTA = '\033[95m'
+    YELLOW = '\033[93m'
+    BLACK = '\033[30m'
     
-class Day(object):
+    WHITE_BG = '\033[107m'
+    RED_BG = '\033[101m'
+    GREEN_BG = '\033[102m'
+    BLUE_BG = '\033[104m'
+    CYAN_BG = '\033[106m'
+    MAGENTA_BG = '\033[105m'
+    YELLOW_BG = '\033[103m'
+    BLACK_BG = '\033[40m'
+    
+    BOLD = '\033[1m'
+    
+    ENDC = '\033[0m'
+
+class DayType:
+    NONE, WEEKDAY, WEEKEND, HOLIDAY, S, V, VAB = range(7)
+    keys = ["NONE", "WEEKAY", "WEEKEND", "HOLIDAY", "S", "V", "VAB"]
+    pretty_keys = ["None", "Weekday", "Weekend", "Holiday", "Sick day", "Vacation", "VAB"]
+    colors = [AnsiColors.ENDC,                        # None
+              AnsiColors.ENDC,                        # Weekday
+              AnsiColors.BLACK + AnsiColors.CYAN_BG,  # Weekend
+              AnsiColors.WHITE + AnsiColors.BLUE_BG,  # Holiday
+              AnsiColors.RED,                         # Sick day
+              AnsiColors.GREEN,                       # Vacation
+              AnsiColors.YELLOW]                      # VAB
+   
+
+class CalendarDay(object):
+    """Class representing a day in the calendar"""
+    
+    def __init__(self, date=None):
+        self.date = date
+        self.comment = ""
+        self.standard_hours = datetime.timedelta()
+        self.type = DayType.NONE
+        self.report = None
+
+    
+class DayReport(object):
     """Class representing a day in a report"""
-    def __init__(self):
-        self.day = None
+        
+    def __init__(self, date=None):
+        self.date = date
+        
         self.start = None
         self.end = None
         self.lunch = None
         self.deviation = None
         self.hours = None
-        self.comment = None
-        self.vacation = False
-        self.sick_day = False
-        self.vab = False
-
+        self.comment = ""
+        self.type = DayType.NONE
     
     def parse_string(self, line, month, year):
+        
+        # Parse comment which is only allowed last
+        m = _comment_pattern.search(line)
+        if m:
+            if m.group(2):
+                self.comment = m.group(2)
+            elif m.group(5):
+                self.comment = m.group(5)
+            line = _comment_pattern.sub('', line)
+        
         tokens = line.strip().split()
         
         # Parse date
         if tokens[0].find(".") == -1:
             raise Exception("Line must start with a date in the form '1.'.")
     
-        self.day = int(tokens[0][:-1])
-        tokens.pop(0)
+        self.date = int(tokens.pop(0)[:-1])
         
-        # Parse comment which is always last or missing
-        m = _comment_pattern.match(tokens[-1])
-        if m:
-            if m.group(2):
-                self.comment = m.group(2)
-            elif m.group(5):
-                self.comment = m.group(5)
-            tokens.pop()
+            
+        # Parse special modification wich is only allowed directly after date
+        if tokens[0].upper() in DayType.keys:
+            self.type = getattr(DayType, tokens.pop(0).upper())
+        else:
+            self.type = DayType.WEEKDAY
         
         # Parse rest of tokens
         while tokens:
             token = tokens.pop(0)
             if self.start is None:
-                self.start = make_datetime(token, self.day, month, year)
+                self.start = make_datetime(token, self.date, month, year)
             elif self.lunch is None:
                 self.lunch = make_timedelta(token)
             elif self.end is None:
-                self.end = make_datetime(token, self.day, month, year)
+                self.end = make_datetime(token, self.date, month, year)
                 self.hours = (self.end - self.start) - self.lunch
+            else:
+                raise Exception("Unknown token: '%s'" % token)
 
-        self.vacation = False
-        self.sick_day = False
-        self.vab = False
-
-_comment_pattern = re.compile("(?: (\")(.*)(\")|(\')(.*)(\'))\s*$")
+_comment_pattern = re.compile("(?:(\")(.*)(\")|(\')(.*)(\'))\s*$")
 _time_pattern = re.compile("^(\d{1,2})(?:\:|\.)(\d{2})$")
 _timedelta_pattern = re.compile("^((?:-|\+)?\d+)(?:(?:\:|\.)(\d{2}))?$")
-        
+
 def make_datetime(time_string, day, month, year):
     """
     Creates a point of time.
@@ -255,12 +455,23 @@ def make_timedelta(string):
     else:
         raise Exception("Please make this exception more specific.")
     return new_delta
-        
+
+def pretty_time(time):
+    return time.strftime("%H:%M")
+    
 def pretty_timedelta(timedelta):
-    hours, remainder = divmod(int(timedelta.total_seconds()), 3600)
+    if timedelta < datetime.timedelta():
+        negative = True
+    else:
+        negative = False
+    total_seconds = abs(int(timedelta.total_seconds()))
+    hours, remainder = divmod(total_seconds, 3600)
     minutes, seconds = divmod(remainder, 60)
-    pretty = "%s:%s" % (hours, minutes)
+    if minutes < 10:
+        minutes = "0%s" % minutes
+    pretty = "%s%s:%s" % ("-" * negative, hours, minutes)
     return pretty
+    
     
 if __name__ == '__main__':
     main()
