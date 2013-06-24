@@ -1,16 +1,18 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""Usage: chrono.py ( ls | setup | report | edit) [-c]
+"""Usage: chrono.py [-c] ( ls | setup | edit [<month>]) 
+       chrono.py [-c] report <report_string>
        chrono.py -h | --help
 
-Displays amra files with or without masks.
+The magical chrono time report tool.
 
 Arguments:
-  ls          List reports
-  setup       Set up work info
-  report      Make new report
-  edit        Edit a report
+  ls            List reports
+  setup         Set up work info
+  report        Make new report
+  report_string A report string
+  edit          Edit a report in external editor
 
 Options:
   -h --help                    Print this message.
@@ -24,19 +26,22 @@ import calendar as cal
 import datetime
 import re
 import glob
+import subprocess
+import sys
 
 def main():
     arguments = docopt(__doc__)
     chrono = Chrono()
+    print arguments
     if arguments['--color']:
         chrono.settings['color'] = True
     
     if arguments['ls']:
-        chrono.list_reports()
+        chrono.make_reports()
     elif arguments['report']:
-        chrono.new_report() 
+        chrono.new_report(arguments["<report_string>"]) 
     elif arguments['edit']:
-        chrono.edit_report()
+        chrono.edit_report(arguments['<month>'])
     elif arguments['setup']:
         chrono.setup()
 
@@ -53,7 +58,7 @@ class Chrono(object):
         self.months = []
         self.calendar = {}
         self.report_archive = Archive()
-
+        
         self.read_year_conf()
         self.read_report_files()
         
@@ -131,6 +136,7 @@ class Chrono(object):
     
     def create_user(self):
         new_user = User()
+        new_user.vacation = 30
         return new_user
     
     def read_report_files(self):
@@ -149,9 +155,9 @@ class Chrono(object):
                 new_day.parse_string(line, month, year)
                 new_month.add_report(new_day)
             
-            self.months.append(new_month)        
-
-    def list_reports(self, filter=""):
+            self.months.append(new_month)
+        
+    def make_reports(self, filter=""):
         """
         Prints out a report in the terminal for the current month. Future
         implementation should allow more flexible output that can be configured
@@ -161,78 +167,135 @@ class Chrono(object):
         # TODO:
         # - implement filter
         
+        
+        
         total_flex = datetime.timedelta()
+        utilised_vacation = 0
         today = datetime.date.today()
         
         for month in self.months:
-            print "\n%s %s" % (cal.month_name[month.month], month.year)
-            print "%s" % ("-" * 80)
-            print """            Start   Lunch    End    Hours"""
-            print "%s+%s+%s" % ("-" * 8, "-" * 35, "-" * 35)
+            month_report = Report([10, 7, 7, 7, 7, 40])
+            month_report.set_title("%s %s" % (cal.month_name[month.month],
+                                              month.year))
+            month_report.add_header(["Date",
+                                     "Start",
+                                     "End",
+                                     "Hours",
+                                     "Day",
+                                     "Comment"])
+                        
             for date, day in month.calendar.items():
                 if (today.month < month.month or
                     today.month == month.month and today < day.date):
                          break
-                weekday = cal.weekday(month.year, month.month, date)
-            
-                day_string = "%s %s. |" % (cal.day_abbr[weekday], str(date).rjust(2))
+                row = []
                 
+                weekday = cal.weekday(month.year, month.month, date)     
+                date_field = "%s %s." % (cal.day_abbr[weekday], str(date).rjust(2))
+                if self.settings['color']:
+                    date_field = DayType.colors[day.type] + date_field + AnsiColors.ENDC
+                row.append(date_field)
+                                    
                 if date in month.reports:
                     report = month.reports[date]
                     day.type = report.type
-                    day.comment = report.comment
                     
-                    if day.type == DayType.WEEKDAY:
-                        if report.start:
-                            day_string += "   %s" % pretty_time(report.start)
-
-                        if report.lunch:
-                            day_string += "   %s" % pretty_timedelta(report.lunch).rjust(5)
-
-                        if report.end:
-                            day_string += "   %s   %s   |" % (pretty_time(report.end), pretty_timedelta(report.hours).rjust(5))
-                    
+                    if report.start:
+                        row.append(pretty_time(report.start))
                     else:
-                        day_string += "%s|" % (" " * 35)
-                        day.comment = "%s. %s" % (DayType.pretty_keys[day.type], day.comment)
-                        #day_string += "   %s   |" % DayType.pretty_keys[day.type].center(29)
-                elif day.type == DayType.WEEKEND or day.type == DayType.HOLIDAY:
-                    day_string += "                                   |"
-                if day.comment:
-                    day_string += "   %s" % day.comment.ljust(29)
-
-                padding = 80 - len(day_string.decode("utf-8"))
-                day_string += "%s" % (padding * " ")
-                if self.settings['color']:
-                    print DayType.colors[day.type] + day_string + AnsiColors.ENDC
+                        row += [None]
+                    if report.lunch:
+                        row.append(pretty_timedelta(report.lunch))
+                    else:
+                        row += [None]
+                    if report.end:
+                        row.append(pretty_time(report.end))
+                        row.append(pretty_timedelta(report.hours))
+                    else:
+                        row += [None, None]
+                    
+                    # Make one comment string from multiple sources
+                    comment_string = ""
+                    if report.type in [DayType.S, DayType.V, DayType.VAB]:
+                        deviation_type = DayType.pretty_keys[report.type]
+                    else:
+                        deviation_type = None
+                    
+                    for comment in [comment for comment in [report.comment, deviation_type, day.comment] if comment]:
+                        if comment_string:
+                            comment_string += ". "
+                        comment_string += comment
+                    row.append(comment_string)
+                    if day.type == DayType.V:
+                        utilised_vacation += 1
                 else:
-                    print day_string
+                    row += [None, None, None, None]
+                    row.append(day.comment)
+                
+                month_report.add_row(row)
                     
-                    
-                    
+            month_report.print_report()
+            
             flex = month.calculate_flex()
             total_flex += flex
             print "%s+%s+%s" % ("-" * 8, "-" * 35, "-" * 35)
             print """           Flex for %s: %s""" % (cal.month_name[month.month], pretty_timedelta(flex))
             print "%s" % ("-" * 80)
+        
+        total_flex += self.report_archive.calculate_flex()
+        utilised_vacation += self.report_archive.utilised_vacation()
+        print "\nTotal flex: %s" % (pretty_timedelta(total_flex))
+        print "Vacation left: %s/%s" % (self.user.vacation - utilised_vacation, self.user.vacation)
+        print
     
-        print "\nTotal flex: %s" % (pretty_timedelta(total_flex + self.report_archive.calculate_flex()))
-    
-    def new_report(self):
+    def new_report(self, report):
         """
         Creates a new report from a string. Should be able to handle icomplete
         strings e.g. just reporting date and start time.
         """
-        print "NEW"
+        # TODO:
+        # - contextual stuff depending on if there allready is a started report
+        #   for today etc.
+        new_day = DayReport()
+        new_day.parse_string(report,
+                             datetime.date.today().month,
+                             datetime.date.today().year)
+        print new_day
+        
     
-    def edit_report(self):
+    def edit_report(self, file_key):
         """
-        Edits a previous report.
+        Edits a report in external editor.
         """
-        print "EDIT"
+        
+        # TODO:
+        # - Look for enviroment variables if editor is missing in .chorno
+        # - Take arguments if you want to edit another file than the latest
+        # - Create a new text file if new month
+        
+        editor_cmd = None
+        if 'editor' in self.settings:
+            editor_cmd = self.settings['editor']
+        
+        year = datetime.date.today().year 
+        month = datetime.date.today().month
+        if month < 10:
+            month = "0%s" % month
+        # Look for current month
+        if file_key == None:
+            file_name = os.path.join(self.settings["chronopath"], "%s-%s.txt" % (year, month))
+        if editor_cmd and os.path.isfile(file_name):
+            subprocess.Popen([editor_cmd, file_name],
+                              stdout=subprocess.PIPE, 
+                              stderr=subprocess.STDOUT)
+        else:
+            raise Exception("No external editor is set")
 
     def setup(self):
         print "SETUP"
+    
+    def print_month(self):
+        pass
 
 class User(object):
     """Class representing a user i.e. an employee"""
@@ -256,6 +319,13 @@ class Archive(object):
             if day.hours:
                 flex += (day.hours - self.standard_hours[day.reports])
         return flex
+    
+    def utilised_vacation(self):
+        utilised_vacation = 0
+        for day in self.reports.values():
+            if day.type == DayType.V:
+                utilised_vacation += 1
+        return utilised_vacation
  
 class Month(object):
     """Class representing a month"""
@@ -315,6 +385,40 @@ class Month(object):
         all_days.sort(key=lambda x: x.date)
         return all_days
 
+class Report(object):
+    """Class for structuring and printing time reports"""
+    def __init__(self, cols):
+        self._cols = cols
+        self._rows = []
+        self._title = None
+        self._header = []
+        self._lines = True
+    
+    def set_title(self, title):
+        self._title = title
+    
+    def add_header(self, header):
+        assert len(header) <= len(self._cols)
+        self._header = header
+    
+    def add_row(self, row):
+        assert len(row) <= len(self._cols)
+        self._rows.append(row)
+        
+    def print_report(self):
+        if self._title:
+            print self._title
+        for n, h in enumerate(self._header):
+            print h.ljust(self._cols[n]),
+        print
+        for row in self._rows:
+            for n, cell in enumerate(row):
+                if cell:
+                    print cell.ljust(self._cols[n]),
+                else:
+                    print " " * self._cols[n],
+            print
+
 class AnsiColors:
     WHITE = '\033[97m'
     RED = '\033[91m'
@@ -345,7 +449,7 @@ class DayType:
     colors = [AnsiColors.ENDC,                        # None
               AnsiColors.ENDC,                        # Weekday
               AnsiColors.BLACK + AnsiColors.CYAN_BG,  # Weekend
-              AnsiColors.WHITE + AnsiColors.BLUE_BG,  # Holiday
+              AnsiColors.BLACK + AnsiColors.CYAN_BG,  # Holiday
               AnsiColors.RED,                         # Sick day
               AnsiColors.GREEN,                       # Vacation
               AnsiColors.YELLOW]                      # VAB
@@ -356,7 +460,7 @@ class CalendarDay(object):
     
     def __init__(self, date=None):
         self.date = date
-        self.comment = ""
+        self.comment = None
         self.standard_hours = datetime.timedelta()
         self.type = DayType.NONE
         self.report = None
@@ -373,7 +477,7 @@ class DayReport(object):
         self.lunch = None
         self.deviation = None
         self.hours = None
-        self.comment = ""
+        self.comment = None
         self.type = DayType.NONE
     
     def parse_string(self, line, month, year):
@@ -471,7 +575,7 @@ def pretty_timedelta(timedelta):
         minutes = "0%s" % minutes
     pretty = "%s%s:%s" % ("-" * negative, hours, minutes)
     return pretty
-    
+        
     
 if __name__ == '__main__':
     main()
