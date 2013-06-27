@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""Usage: chrono.py [-c] ( ls | setup | edit [<month>]) 
-       chrono.py [-c] report <report_string>
+"""Usage: chrono.py [-cd] ( ls | setup | edit [<month>]) 
+       chrono.py [-cd] report <report_string>
        chrono.py -h | --help
 
 The magical chrono time report tool.
@@ -15,8 +15,9 @@ Arguments:
   edit          Edit a report in external editor
 
 Options:
-  -h --help                    Print this message.
-  -c --color                   Prints whith color
+  -h --help     Print this message.
+  -c --color    Print whith color
+  -d --debug    Print stuff
 """
 
 from docopt import docopt
@@ -32,7 +33,8 @@ import sys
 def main():
     arguments = docopt(__doc__)
     chrono = Chrono()
-    print arguments
+    if arguments['--debug']:
+        print arguments
     if arguments['--color']:
         chrono.settings['color'] = True
     
@@ -285,9 +287,7 @@ class Chrono(object):
         if file_key == None:
             file_name = os.path.join(self.settings["chronopath"], "%s-%s.txt" % (year, month))
         if editor_cmd and os.path.isfile(file_name):
-            subprocess.Popen([editor_cmd, file_name],
-                              stdout=subprocess.PIPE, 
-                              stderr=subprocess.STDOUT)
+            subprocess.call([editor_cmd, file_name])
         else:
             raise Exception("No external editor is set")
 
