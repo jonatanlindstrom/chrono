@@ -1,18 +1,18 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""Usage: chrono.py [-cd] ( ls | setup | edit [<month>]) 
-       chrono.py [-cd] report <report_string>
-       chrono.py -h | --help
+"""Usage: chrono.py [-cd] (add <report_string> | today [<report_string>])
+       chrono.py [-cd] ls [<day> [<month> [<year>]]]
+       chrono.py edit [<month>] 
+       chrono.py -h
 
 The magical chrono time report tool.
 
 Arguments:
-  ls            List reports
-  setup         Set up work info
-  report        Make new report
-  report_string A report string
-  edit          Edit a report in external editor
+  add           Add a report.
+  today         Report for today or show today.
+  ls            List the current report files.
+  edit          Edit a report in external editor.
 
 Options:
   -h --help     Print this message.
@@ -33,27 +33,41 @@ import sys
 def main():
     arguments = docopt(__doc__)
     chrono = Chrono()
+    today = datetime.date.today().day
+    
     if arguments['--debug']:
         print arguments
     if arguments['--color']:
         chrono.settings['color'] = True
     
-    if arguments['ls']:
-        chrono.make_reports()
-    elif arguments['report']:
-        chrono.new_report(arguments["<report_string>"]) 
+    if arguments['add']:
+        chrono.new_report(arguments["<report_string>"])
+    elif arguments['today']:
+        if arguments['<report_string>']:
+            chrono.new_report("%s. %s" % (today, arguments["<report_string>"]))
+        else:
+            chrono.make_reports(today)
+    elif arguments['ls']:
+        if arguments['<day>']:
+            if arguments['<day>'].lower() == "today":
+                day = today
+            else:
+                day = int(arguments['<day>'])
+        else:
+            day = None
+        chrono.make_reports(day, arguments['<month>'], arguments['<year>'])
     elif arguments['edit']:
         chrono.edit_report(arguments['<month>'])
-    elif arguments['setup']:
-        chrono.setup()
 
 class Chrono(object):
     
     def __init__(self):
+        # Create .chrono file if it soesn't exist.
         if not os.path.isfile(os.path.expanduser("~/.chrono")):
             settings = {}
             settings["chronopath"] = os.path.expanduser("~/chrono/")
             self.write_dot_file(settings)
+            
         self.settings = self.read_dot_file()
 
         self.user = self.create_user()
@@ -62,8 +76,18 @@ class Chrono(object):
         self.report_archive = Archive()
         
         self.read_year_conf()
-        self.read_report_files()
         
+        # Create report file for current month if it doesn't exist.
+        year = datetime.date.today().year 
+        month = datetime.date.today().month
+        if month < 10:
+            month = "0%s" % month
+        current_month_path = os.path.join(self.settings["chronopath"],
+                                          "%s-%s.txt" % (year, month))
+        open(current_month_path, 'a').close()
+
+        self.read_report_files()
+            
     def write_dot_file(self, settings):
         dot_file = open(os.path.expanduser("~/.chrono.tmp"), "w")
         for key, value in settings.iteritems():
@@ -142,14 +166,15 @@ class Chrono(object):
         return new_user
     
     def read_report_files(self):
-        month_reports = glob.glob(os.path.join(self.settings["chronopath"], "20[0-9][0-9]-[0-1][0-9].txt"))
-        
+        month_reports = glob.glob(os.path.join(self.settings["chronopath"],
+                                               "20[0-9][0-9]-[0-1][0-9].txt"))
         for month_report in month_reports:
             file = os.path.split(month_report)[1]
             year = int(file[0:4])
             month = int(file[5:7])
             new_month = Month(month, year)
-            new_month.add_calendar(self.calendar[year][month])
+            if month in self.calendar[year]:
+                new_month.add_calendar(self.calendar[year][month])
 
             f = open(month_report, "r")
             for line in f.readlines():
@@ -159,7 +184,7 @@ class Chrono(object):
             
             self.months.append(new_month)
         
-    def make_reports(self, filter=""):
+    def make_reports(self, day=None, month=None, year=None):
         """
         Prints out a report in the terminal for the current month. Future
         implementation should allow more flexible output that can be configured
@@ -167,88 +192,89 @@ class Chrono(object):
         """
 
         # TODO:
-        # - implement filter
-        
-        
-        
+        # - implement filter    
         total_flex = datetime.timedelta()
         utilised_vacation = 0
-        today = datetime.date.today()
         
         for month in self.months:
-            month_report = Report([10, 7, 7, 7, 7, 40])
-            month_report.set_title("%s %s" % (cal.month_name[month.month],
-                                              month.year))
-            month_report.add_header(["Date",
-                                     "Start",
-                                     "End",
-                                     "Hours",
-                                     "Day",
-                                     "Comment"])
-                        
-            for date, day in month.calendar.items():
-                if (today.month < month.month or
-                    today.month == month.month and today < day.date):
-                         break
-                row = []
-                
-                weekday = cal.weekday(month.year, month.month, date)     
-                date_field = "%s %s." % (cal.day_abbr[weekday], str(date).rjust(2))
-                if self.settings['color']:
-                    date_field = DayType.colors[day.type] + date_field + AnsiColors.ENDC
-                row.append(date_field)
-                                    
-                if date in month.reports:
-                    report = month.reports[date]
-                    day.type = report.type
-                    
-                    if report.start:
-                        row.append(pretty_time(report.start))
-                    else:
-                        row += [None]
-                    if report.lunch:
-                        row.append(pretty_timedelta(report.lunch))
-                    else:
-                        row += [None]
-                    if report.end:
-                        row.append(pretty_time(report.end))
-                        row.append(pretty_timedelta(report.hours))
-                    else:
-                        row += [None, None]
-                    
-                    # Make one comment string from multiple sources
-                    comment_string = ""
-                    if report.type in [DayType.S, DayType.V, DayType.VAB]:
-                        deviation_type = DayType.pretty_keys[report.type]
-                    else:
-                        deviation_type = None
-                    
-                    for comment in [comment for comment in [report.comment, deviation_type, day.comment] if comment]:
-                        if comment_string:
-                            comment_string += ". "
-                        comment_string += comment
-                    row.append(comment_string)
-                    if day.type == DayType.V:
-                        utilised_vacation += 1
-                else:
-                    row += [None, None, None, None]
-                    row.append(day.comment)
-                
-                month_report.add_row(row)
-                    
+            month_report = self.report_from_month(month)
             month_report.print_report()
             
-            flex = month.calculate_flex()
-            total_flex += flex
-            print "%s+%s+%s" % ("-" * 8, "-" * 35, "-" * 35)
-            print """           Flex for %s: %s""" % (cal.month_name[month.month], pretty_timedelta(flex))
-            print "%s" % ("-" * 80)
+            month_flex = month.calculate_flex()
+            total_flex += month_flex
+            utilised_vacation += month.utilised_vacation()
+            
+            print("%s" % ("-" * 40))
+            print("Flex for %s: %s" %
+                  (cal.month_name[month.month], pretty_timedelta(month_flex))).rjust(40)
+            print("%s" % ("-" * 40))
         
         total_flex += self.report_archive.calculate_flex()
         utilised_vacation += self.report_archive.utilised_vacation()
         print "\nTotal flex: %s" % (pretty_timedelta(total_flex))
         print "Vacation left: %s/%s" % (self.user.vacation - utilised_vacation, self.user.vacation)
         print
+    
+    def report_from_month(self, month):
+        today = datetime.date.today()
+        month_report = Report([10, 7, 7, 7, 7, 40])
+        month_report.set_title("%s %s" % (cal.month_name[month.month],
+                                          month.year))
+        month_report.add_header(["Date",
+                                 "Start",
+                                 "End",
+                                 "Hours",
+                                 "Day",
+                                 "Comment"])
+                    
+        for date, day in month.calendar.items():
+            if (today.month < month.month or
+                today.month == month.month and today < day.date):
+                     break
+            row = []
+            
+            weekday = cal.weekday(month.year, month.month, date)     
+            date_field = "%s %s." % (cal.day_abbr[weekday], str(date).rjust(2))
+            if self.settings['color']:
+                date_field = DayType.colors[day.type] + date_field + AnsiColors.ENDC
+            row.append(date_field)
+                                
+            if date in month.reports:
+                report = month.reports[date]
+                day.type = report.type
+                
+                if report.start:
+                    row.append(pretty_time(report.start))
+                else:
+                    row += [None]
+                if report.lunch:
+                    row.append(pretty_timedelta(report.lunch))
+                else:
+                    row += [None]
+                if report.end:
+                    row.append(pretty_time(report.end))
+                    row.append(pretty_timedelta(report.hours))
+                else:
+                    row += [None, None]
+                
+                # Make one comment string from multiple sources
+                comment_string = ""
+                if report.type in [DayType.S, DayType.V, DayType.VAB]:
+                    deviation_type = DayType.pretty_keys[report.type]
+                else:
+                    deviation_type = None
+                
+                for comment in [comment for comment in [report.comment, deviation_type, day.comment] if comment]:
+                    if comment_string:
+                        comment_string += ". "
+                    comment_string += comment
+                row.append(comment_string)
+            else:
+                row += [None, None, None, None]
+                row.append(day.comment)
+            
+            month_report.add_row(row)
+        return month_report
     
     def new_report(self, report):
         """
@@ -258,11 +284,29 @@ class Chrono(object):
         # TODO:
         # - contextual stuff depending on if there allready is a started report
         #   for today etc.
+        
+        
         new_day = DayReport()
         new_day.parse_string(report,
                              datetime.date.today().month,
                              datetime.date.today().year)
-        print new_day
+        
+        last_report = self.months[0].reports[max(self.months[0].reports)]
+        if new_day.date < last_report.date:
+            print("This date allready has report. Use command 'edit' to edit"
+                  "report.")
+        #        if not report.start and new_day.start:
+        #            report.start = new_day.start
+        #            if not report.lunch and new_day.lunch:
+        #                report.lunch = new_day.lunch
+        #                if not report.end and new_day.deviation:
+        #                    report.end = new_day.deviation
+        #                    if not report.deviation and new_day.deviation:
+        #                        report.deviation = new_day.deviation
+        #elif new_day.date == last_report.date:
+
+        
+        #print new_day
         
     
     def edit_report(self, file_key):
@@ -375,6 +419,13 @@ class Month(object):
             if day.hours:
                 flex += (day.hours - self.calendar[date].standard_hours)
         return flex
+    
+    def utilised_vacation(self):
+        utilised_vacation = 0
+        for day in self.reports.values():
+            if day.type == DayType.V:
+                utilised_vacation += 1
+        return utilised_vacation
     
     def all_days(self):
         # todo:
@@ -574,7 +625,7 @@ def pretty_timedelta(timedelta):
     if minutes < 10:
         minutes = "0%s" % minutes
     pretty = "%s%s:%s" % ("-" * negative, hours, minutes)
-    return pretty
+    return pretty.rjust(5)
         
     
 if __name__ == '__main__':
