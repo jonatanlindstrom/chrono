@@ -11,4 +11,3 @@ class BadTimeError(ChronoError):
 
 class ReportError(ChronoError):
     pass
-

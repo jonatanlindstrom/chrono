@@ -2,8 +2,8 @@
 
 import nose.tools as nt
 import datetime
-import day
-import errors
+from chrono import day
+from chrono import errors
 
 class TestDay(object):
     def setup(self):
@@ -189,23 +189,23 @@ class TestDay(object):
         nt.assert_equal(day_2.worked_hours(),
                         datetime.timedelta(hours=8, minutes=10))
 
-    def test_hours_differece(self):
+    def test_flextime(self):
         day_1 = day.Day("2014-09-01")
         nt.assert_raises_regex(
             errors.ReportError,
             "Date 2014-09-01 must have a start time, a lunch duration and an "
             "end time before the day can be summarized.",
-            day_1.hours_difference)
+            day_1.calculate_flextime)
 
         day_1.report_start_time("8:00")
         day_1.report_lunch_duration("0:45")
         day_1.report_end_time("17:00")
-        nt.assert_equal(day_1.hours_difference(),
+        nt.assert_equal(day_1.calculate_flextime(),
                         datetime.timedelta(minutes=15))
 
         day_2 = day.Day("2014-09-02")
         day_2.report_start_time("9:00")
         day_2.report_lunch_duration("0:30")
         day_2.report_end_time("17:00")
-        nt.assert_equal(day_2.hours_difference(),
+        nt.assert_equal(day_2.calculate_flextime(),
                         datetime.timedelta(minutes=-30))

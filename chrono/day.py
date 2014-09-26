@@ -2,7 +2,7 @@
 
 import datetime
 import re
-import errors
+from chrono import errors
 
 class Day(object):
     def __init__(self, date_string):
@@ -89,5 +89,5 @@ class Day(object):
                                          self.date.isoformat()))
         return self.end_time - self.start_time - self.lunch_duration
 
-    def hours_difference(self):
+    def calculate_flextime(self):
         return self.worked_hours() - self.expected_hours

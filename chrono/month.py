@@ -2,8 +2,8 @@
 
 import datetime
 import re
-import errors
-import day
+from chrono import errors
+from chrono.day import Day
 
 class Month(object):
     def __init__(self, month_string):
@@ -17,10 +17,16 @@ class Month(object):
         self.days = []
     
     def add_day(self, date_string):
-        new_day = day.Day(date_string)
+        new_day = Day(date_string)
         for old_day in self.days:
             if not old_day.complete():
                 raise errors.ReportError("A new day can't be added until all "
                                          "previous days are complete.")
         self.days.append(new_day)
         return new_day
+
+    def calculate_flextime(self):
+        flextime = datetime.timedelta()
+        for day in self.days:
+            flextime += day.calculate_flextime()
+        return flextime
