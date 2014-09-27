@@ -14,25 +14,25 @@ class TestDay(object):
 
     def test_expected_hours(self):
         nt.assert_equal(day.Day("2014-09-01").expected_hours,
-                                   datetime.timedelta(hours=8))
+                        datetime.timedelta(hours=8))
 
         nt.assert_equal(day.Day("2014-09-02").expected_hours,
-                                   datetime.timedelta(hours=8))
+                        datetime.timedelta(hours=8))
 
         nt.assert_equal(day.Day("2014-09-03").expected_hours,
-                                   datetime.timedelta(hours=8))
+                        datetime.timedelta(hours=8))
 
         nt.assert_equal(day.Day("2014-09-04").expected_hours,
-                                   datetime.timedelta(hours=8))
+                        datetime.timedelta(hours=8))
 
         nt.assert_equal(day.Day("2014-09-05").expected_hours,
-                                   datetime.timedelta(hours=8))
+                        datetime.timedelta(hours=8))
 
         nt.assert_equal(day.Day("2014-09-06").expected_hours,
-                                   datetime.timedelta())
+                        datetime.timedelta())
 
         nt.assert_equal(day.Day("2014-09-07").expected_hours,
-                                   datetime.timedelta())
+                        datetime.timedelta())
 
 
     def test_bad_date(self):
@@ -138,14 +138,26 @@ class TestDay(object):
         day_1.report_end_time("17:00")
         nt.assert_equal(day_1.end_time,
                         datetime.datetime(year=2014, month=9, day=1, hour=17))
+
+    def test_report(self):
+        day_1 = day.Day("2014-09-01")
+        nt.assert_false(day_1.complete())
+        day_1.report("8:00", "1:00", "17:00")
+        nt.assert_true(day_1.complete())
+        nt.assert_equal(day_1.start_time,
+                        datetime.datetime(year=2014, month=9, day=1, hour=8))
+        
+        nt.assert_equal(day_1.lunch_duration,
+                        datetime.timedelta(hours=1))
+        
+        nt.assert_equal(day_1.end_time,
+                        datetime.datetime(year=2014, month=9, day=1, hour=17))
         
         day_2 = day.Day("2014-09-02")
-        day_2.report_start_time("8:00")
-        day_2.report_lunch_duration("1:00")
-        day_1.report_end_time("16:30")
+        day_2.report("8:00", "1:00", "16:30")
         nt.assert_equal(
-            day_1.end_time, 
-            datetime.datetime(year=2014, month=9, day=1, hour=16, minute=30))
+            day_2.end_time, 
+            datetime.datetime(year=2014, month=9, day=2, hour=16, minute=30))
 
     def test_bad_end_time(self):
         day_1 = day.Day("2014-09-01")

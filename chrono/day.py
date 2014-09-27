@@ -73,6 +73,11 @@ class Day(object):
             raise errors.BadTimeError("Bad end time: \"{}\"".format(end_time))
         self.end_time = datetime.datetime.combine(self.date, end_time)
 
+    def report(self, start, lunch, end):
+        self.report_start_time(start)
+        self.report_lunch_duration(lunch)
+        self.report_end_time(end)
+
     def complete(self):
         complete_status = (self.start_time is not None and
                            self.lunch_duration is not None and
