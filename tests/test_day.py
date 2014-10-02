@@ -5,6 +5,7 @@ import datetime
 from chrono import day
 from chrono import errors
 
+
 class TestDay(object):
     def setup(self):
         pass
@@ -13,27 +14,26 @@ class TestDay(object):
         pass
 
     def test_expected_hours(self):
-        nt.assert_equal(day.Day("2014-09-01").expected_hours,
+        nt.assert_equal(day.Day("2014-09-01").expected_hours(),
                         datetime.timedelta(hours=8))
 
-        nt.assert_equal(day.Day("2014-09-02").expected_hours,
+        nt.assert_equal(day.Day("2014-09-02").expected_hours(),
                         datetime.timedelta(hours=8))
 
-        nt.assert_equal(day.Day("2014-09-03").expected_hours,
+        nt.assert_equal(day.Day("2014-09-03").expected_hours(),
                         datetime.timedelta(hours=8))
 
-        nt.assert_equal(day.Day("2014-09-04").expected_hours,
+        nt.assert_equal(day.Day("2014-09-04").expected_hours(),
                         datetime.timedelta(hours=8))
 
-        nt.assert_equal(day.Day("2014-09-05").expected_hours,
+        nt.assert_equal(day.Day("2014-09-05").expected_hours(),
                         datetime.timedelta(hours=8))
 
-        nt.assert_equal(day.Day("2014-09-06").expected_hours,
+        nt.assert_equal(day.Day("2014-09-06").expected_hours(),
                         datetime.timedelta())
 
-        nt.assert_equal(day.Day("2014-09-07").expected_hours,
+        nt.assert_equal(day.Day("2014-09-07").expected_hours(),
                         datetime.timedelta())
-
 
     def test_bad_date(self):
         nt.assert_raises_regex(errors.BadDateError,
@@ -50,7 +50,7 @@ class TestDay(object):
                                "^Given date must be a string.$",
                                day.Day,
                                datetime.date(2014, 9, 25))
-        
+
         nt.assert_raises(errors.BadDateError, day.Day, "20140925")
 
     def test_report_start_time(self):
@@ -78,13 +78,13 @@ class TestDay(object):
             "^Bad start time: \"8\".",
             day_3.report_start_time,
             "8")
-        
+
         nt.assert_raises_regex(
             errors.BadTimeError,
             "^Bad start time: \"8.30\".",
             day_3.report_start_time,
             "8.30")
-        
+
         nt.assert_raises_regex(
             errors.BadTimeError,
             "^Bad start time: \"8:10:14\".",
@@ -121,8 +121,8 @@ class TestDay(object):
         nt.assert_equal(day_1.end_time, None)
         nt.assert_raises_regex(
             errors.ReportError,
-            "^Date 2014-09-01 must have a start time before an end time can be "
-            "reported.",
+            "^Date 2014-09-01 must have a start time before an end time can "
+            "be reported.",
             day_1.report_end_time,
             "17:00")
 
@@ -133,7 +133,7 @@ class TestDay(object):
             "can be reported.",
             day_1.report_end_time,
             "17:00")
-            
+
         day_1.report_lunch_duration("1:00")
         day_1.report_end_time("17:00")
         nt.assert_equal(day_1.end_time,
@@ -146,17 +146,17 @@ class TestDay(object):
         nt.assert_true(day_1.complete())
         nt.assert_equal(day_1.start_time,
                         datetime.datetime(year=2014, month=9, day=1, hour=8))
-        
+
         nt.assert_equal(day_1.lunch_duration,
                         datetime.timedelta(hours=1))
-        
+
         nt.assert_equal(day_1.end_time,
                         datetime.datetime(year=2014, month=9, day=1, hour=17))
-        
+
         day_2 = day.Day("2014-09-02")
         day_2.report("8:00", "1:00", "16:30")
         nt.assert_equal(
-            day_2.end_time, 
+            éday_2.end_time,
             datetime.datetime(year=2014, month=9, day=2, hour=16, minute=30))
 
     def test_bad_end_time(self):
@@ -168,7 +168,7 @@ class TestDay(object):
             "^Given end time must be a string.",
             day_1.report_end_time,
             datetime.time(hour=17))
-        
+
         nt.assert_raises_regex(
             errors.BadTimeError,
             "^Bad end time: \"24:00\"$",
@@ -188,7 +188,7 @@ class TestDay(object):
             "Date 2014-09-01 must have a start time, a lunch duration and an "
             "end time before the day can be summarized.",
             day_1.worked_hours)
-                               
+
         day_1.report_start_time("8:00")
         day_1.report_lunch_duration("1:00")
         day_1.report_end_time("17:00")
@@ -221,3 +221,21 @@ class TestDay(object):
         day_2.report_end_time("17:00")
         nt.assert_equal(day_2.calculate_flextime(),
                         datetime.timedelta(minutes=-30))
+
+    def test_day_type(self):
+        day_1 = day.Day("2014-09-01")
+        day_2 = day.Day("2014-09-06")
+        nt.assert_equal(day_1.day_type, day.DayType.working_day)
+        nt.assert_equal(day_1.expected_hours(), datetime.timedelta(hours=8))
+        nt.assert_equal(day_2.day_type, day.DayType.weekend)
+        nt.assert_equal(day_2.expected_hours(), datetime.timedelta(hours=0))
+        day_1.day_type = day.DayType.sick_day
+        nt.assert_equal(day_1.expected_hours(), datetime.timedelta(hours=0))
+        day_1.day_type = day.DayType.vacation
+        nt.assert_equal(day_1.expected_hours(), datetime.timedelta(hours=0))
+        day_1.day_type = day.DayType.weekend
+        nt.assert_equal(day_1.expected_hours(), datetime.timedelta(hours=0))
+        day_1.day_type = day.DayType.holiday
+        nt.assert_equal(day_1.expected_hours(), datetime.timedelta(hours=0))
+        day_1.day_type = day.DayType.working_day
+        nt.assert_equal(day_1.expected_hours(), datetime.timedelta(hours=8))
