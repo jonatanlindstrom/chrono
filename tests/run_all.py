@@ -21,10 +21,10 @@ def check_test_files(directory):
 
 def run_nose(directory):
     os.environ["NOSE_WHERE"] = directory
-    os.environ["NOSE_WITH_COVERAGE"] = "1"
-    os.environ["NOSE_COVER_PACKAGE"] = "chrono"
-    os.environ["NOSE_COVER_BRANCHES"] = "1"
-    os.environ["NOSE_COVER_HTML"] = "1"
+    #os.environ["NOSE_WITH_COVERAGE"] = "1"
+    #os.environ["NOSE_COVER_PACKAGE"] = "chrono"
+    #os.environ["NOSE_COVER_BRANCHES"] = "1"
+    #os.environ["NOSE_COVER_HTML"] = "1"
     os.environ["NOSE_REDNOSE"] = "1"
     os.environ["NOSE_VERBOSE"] = "1"
     return nose.main()

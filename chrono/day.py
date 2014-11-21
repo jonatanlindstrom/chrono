@@ -15,7 +15,7 @@ class DayType(Enum):
 
 
 class Day(object):
-    def __init__(self, date_string):
+    def __init__(self, date_string, user=None):
         try:
             self.date = datetime.datetime.strptime(
                 date_string, "%Y-%m-%d").date()
@@ -29,6 +29,9 @@ class Day(object):
         self.start_time = None
         self.lunch_duration = None
         self.end_time = None
+        self.comment = None
+        self.info = None
+        self.deviation = datetime.timedelta()
 
         if self.date.isoweekday() < 6:
             self.day_type = DayType.working_day
@@ -59,10 +62,14 @@ class Day(object):
             raise errors.ReportError("Date {} allready has a lunch duration."
                                      .format(self.date.isoformat()))
 
-        match = re.match("(\d+):([0-5][0-9])", lunch_duration)
+        match = re.match("^(\d{1,2})(?::(\d{2}))?$", lunch_duration)
         if match:
             self.lunch_duration = datetime.timedelta(
-                hours=int(match.group(1)), minutes=int(match.group(2)))
+                hours=int(match.group(1)), minutes=int(match.group(2) or 0))
+        else:
+            raise errors.ReportError(
+                "Bad lunch duration for date {}: '{}'".format(self.date,
+                                                              lunch_duration))
 
     def report_end_time(self, end_time):
         if self.start_time is None:
@@ -85,10 +92,22 @@ class Day(object):
             raise errors.BadTimeError("Bad end time: \"{}\"".format(end_time))
         self.end_time = datetime.datetime.combine(self.date, end_time)
 
+    def report_deviation(self, deviation):
+        match = re.match("^(\d{1,2})(?::(\d{2}))?$", deviation)
+        if match:
+            self.deviation = -datetime.timedelta(
+                hours=int(match.group(1)), minutes=int(match.group(2) or 0))
+        else:
+            raise errors.ReportError("Bad deviation for date {}: '{}'".format(
+                self.date, deviation))
+
     def report(self, start, lunch, end):
         self.report_start_time(start)
         self.report_lunch_duration(lunch)
         self.report_end_time(end)
+
+    def set_type(self, day_type):
+        self.day_type = day_type
 
     def complete(self):
         complete_status = (self.day_type != DayType.working_day or
@@ -99,8 +118,9 @@ class Day(object):
         return complete_status
 
     def expected_hours(self):
+        standard_day = 8
         if self.day_type == DayType.working_day:
-            expected_hours = datetime.timedelta(hours=8)
+            expected_hours = datetime.timedelta(hours=standard_day)
         else:
             expected_hours = datetime.timedelta(hours=0)
         return expected_hours
@@ -108,11 +128,36 @@ class Day(object):
     def worked_hours(self):
         if (self.start_time is None or self.lunch_duration is None or
                 self.end_time is None):
-            raise errors.ReportError("Date {} must have a start time, a lunch "
-                                     "duration and an end time before the day "
-                                     "can be summarized.".format(
-                                         self.date.isoformat()))
-        return self.end_time - self.start_time - self.lunch_duration
+            hours = datetime.timedelta()
+        else:
+            hours = (self.end_time - self.start_time - self.lunch_duration +
+                     self.deviation)
+    
+        return hours
 
     def calculate_flextime(self):
-        return self.worked_hours() - self.expected_hours()
+        if self.complete():
+            flextime = self.worked_hours() - self.expected_hours()
+        else:
+            flextime = datetime.timedelta()
+        return flextime
+
+    def get_info(self):
+        info = self.info
+        if info:
+            info = info.strip()
+            info = info.strip()
+            info = re.sub("\s+", " ", info)
+            self.info = info
+        if self.comment:
+            self.comment = self.comment.strip()
+            self.comment = self.comment.strip()
+            self.comment = re.sub("\s+", " ", self.comment)
+            if self.comment[-1] not in ".?!":
+                self.comment += "."
+
+        if info and self.comment:
+            if info[-1] not in ".?!":
+                info += "."
+        combined = " ".join([text for text in (info, self.comment) if text])
+        return combined

@@ -27,8 +27,11 @@ class Archive(object):
                                          .format(month.year, month.month))
 
         if (self.next_month() != "" and
-                "{}-{}".format(month.year, month.month) != self.next_month()):
-            raise errors.ReportError("Months must be archived sequentially.")
+                "{}-{:02d}".format(month.year, month.month) != self.next_month()):
+            raise errors.ReportError(
+                "Months must be archived sequentially. Expected {}, got "
+                "{}-{:02d}.".format(
+                    self.next_month(), month.year, month.month))
 
         if not month.complete():
             raise errors.ReportError("Month still has unreported workdays and "

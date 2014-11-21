@@ -15,3 +15,11 @@ class BadTimeError(ChronoError):
 
 class ReportError(ChronoError):
     pass
+
+
+class ParseError(ChronoError):
+    pass
+
+
+class YearError(ChronoError):
+    pass

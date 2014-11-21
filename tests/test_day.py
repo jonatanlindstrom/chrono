@@ -3,6 +3,7 @@
 import nose.tools as nt
 import datetime
 from chrono import day
+from chrono import user
 from chrono import errors
 
 
@@ -139,6 +140,25 @@ class TestDay(object):
         nt.assert_equal(day_1.end_time,
                         datetime.datetime(year=2014, month=9, day=1, hour=17))
 
+    def test_report_end_time(self):
+        day_1 = day.Day("2014-09-01")
+        nt.assert_equal(day_1.deviation, datetime.timedelta())
+        day_1.report("8:00", "1:00", "17:00")
+        day_1.report_deviation("1:10")
+        nt.assert_equal(day_1.deviation,
+                        datetime.timedelta(hours=1, minutes=10))
+
+        nt.assert_equal(day_1.worked_hours(),
+                        datetime.timedelta(hours=6, minutes=50))
+        
+        day_2 = day.Day("2014-10-01")
+        nt.assert_equal(day_2.deviation, datetime.timedelta())
+        day_2.report("8:00", "1:00", "17:00")
+        day_2.report_deviation("0")
+        nt.assert_equal(day_2.deviation, datetime.timedelta())
+
+        nt.assert_equal(day_2.worked_hours(), datetime.timedelta(hours=8))
+
     def test_report(self):
         day_1 = day.Day("2014-09-01")
         nt.assert_false(day_1.complete())
@@ -156,7 +176,7 @@ class TestDay(object):
         day_2 = day.Day("2014-09-02")
         day_2.report("8:00", "1:00", "16:30")
         nt.assert_equal(
-            éday_2.end_time,
+            day_2.end_time,
             datetime.datetime(year=2014, month=9, day=2, hour=16, minute=30))
 
     def test_bad_end_time(self):
@@ -183,11 +203,7 @@ class TestDay(object):
 
     def test_actual_hours(self):
         day_1 = day.Day("2014-09-01")
-        nt.assert_raises_regex(
-            errors.ReportError,
-            "Date 2014-09-01 must have a start time, a lunch duration and an "
-            "end time before the day can be summarized.",
-            day_1.worked_hours)
+        nt.assert_equal(day_1.worked_hours(), datetime.timedelta())
 
         day_1.report_start_time("8:00")
         day_1.report_lunch_duration("1:00")
@@ -203,12 +219,8 @@ class TestDay(object):
 
     def test_flextime(self):
         day_1 = day.Day("2014-09-01")
-        nt.assert_raises_regex(
-            errors.ReportError,
-            "Date 2014-09-01 must have a start time, a lunch duration and an "
-            "end time before the day can be summarized.",
-            day_1.calculate_flextime)
-
+        nt.assert_equal(day_1.calculate_flextime(), datetime.timedelta())
+                        
         day_1.report_start_time("8:00")
         day_1.report_lunch_duration("0:45")
         day_1.report_end_time("17:00")
@@ -222,6 +234,23 @@ class TestDay(object):
         nt.assert_equal(day_2.calculate_flextime(),
                         datetime.timedelta(minutes=-30))
 
+        day_3 = day.Day("2014-09-03")
+        day_3.set_type(day.DayType.sick_day)
+        nt.assert_equal(day_3.calculate_flextime(), datetime.timedelta())
+        day_3.set_type(day.DayType.vacation)
+        nt.assert_equal(day_3.calculate_flextime(), datetime.timedelta())
+        day_3.set_type(day.DayType.weekend)
+        nt.assert_equal(day_3.calculate_flextime(), datetime.timedelta())
+        day_3.set_type(day.DayType.holiday)
+        nt.assert_equal(day_3.calculate_flextime(), datetime.timedelta())
+        
+        day_3.set_type(day.DayType.working_day)
+        day_3.report_start_time("8:00")
+        day_3.report_lunch_duration("1:01")
+        day_3.report_end_time("17:00")
+        nt.assert_equal(day_3.calculate_flextime(),
+                        datetime.timedelta(minutes=-1))
+
     def test_day_type(self):
         day_1 = day.Day("2014-09-01")
         day_2 = day.Day("2014-09-06")
@@ -229,13 +258,71 @@ class TestDay(object):
         nt.assert_equal(day_1.expected_hours(), datetime.timedelta(hours=8))
         nt.assert_equal(day_2.day_type, day.DayType.weekend)
         nt.assert_equal(day_2.expected_hours(), datetime.timedelta(hours=0))
-        day_1.day_type = day.DayType.sick_day
+        day_1.set_type(day.DayType.sick_day)    
         nt.assert_equal(day_1.expected_hours(), datetime.timedelta(hours=0))
-        day_1.day_type = day.DayType.vacation
+        day_1.set_type(day.DayType.vacation)    
         nt.assert_equal(day_1.expected_hours(), datetime.timedelta(hours=0))
-        day_1.day_type = day.DayType.weekend
+        day_1.set_type(day.DayType.weekend) 
         nt.assert_equal(day_1.expected_hours(), datetime.timedelta(hours=0))
-        day_1.day_type = day.DayType.holiday
+        day_1.set_type(day.DayType.holiday) 
         nt.assert_equal(day_1.expected_hours(), datetime.timedelta(hours=0))
-        day_1.day_type = day.DayType.working_day
+        day_1.set_type(day.DayType.working_day) 
         nt.assert_equal(day_1.expected_hours(), datetime.timedelta(hours=8))
+
+    def test_day_no_info(self):
+        day_1 = day.Day("2014-09-01")
+        nt.assert_equal(day_1.comment, None)
+        nt.assert_equal(day_1.info, None)
+        nt.assert_equal(day_1.get_info(), "")
+
+    def test_day_comment(self):
+        day_1 = day.Day("2014-09-01")
+        day_1.comment = "Good day."
+        nt.assert_equal(day_1.get_info(), "Good day.")
+
+    def test_day_info(self):
+        day_1 = day.Day("2014-09-01")
+        day_1.info = "A day"
+        nt.assert_equal(day_1.get_info(), "A day")
+
+    def test_day_comment_and_info(self):
+        day_1 = day.Day("2014-09-01")
+        day_1.info = "A day in life"
+        day_1.comment = "I read the news today, oh boy!"
+        nt.assert_equal(day_1.get_info(),
+                        "A day in life. I read the news today, oh boy!")
+
+    def test_day_optional_info_period(self):
+        day_1 = day.Day("2014-09-01")
+        day_1.info = "A day in life"
+        nt.assert_equal(day_1.get_info(), "A day in life")
+        day_1.comment = "I read the news today, Oh boy"
+        nt.assert_equal(day_1.get_info(),
+                        "A day in life. I read the news today, Oh boy.")
+
+        nt.assert_equal(day_1.info, "A day in life")
+        nt.assert_equal(day_1.comment, "I read the news today, Oh boy.")
+
+    def test_day_messy_info(self):
+        day_1 = day.Day("2014-09-01")
+        day_1.info = "  A  day  in  life...     "
+        day_1.comment = "    I  read the news today, oh boy "
+        nt.assert_equal(day_1.get_info(),
+                        "A day in life... I read the news today, oh boy.")
+
+        day_2 = day.Day("2014-09-01")
+        day_2.info = "How many roads must a man walk down?\n"
+        day_2.comment = """
+The answer my friend,
+is blowing in the wind.
+The answer is blowing in the wind"""
+
+        nt.assert_equal(
+            day_2.get_info(),
+            "How many roads must a man walk down? The answer my friend, "
+            "is blowing in the wind. The answer is blowing in the wind.")
+
+        nt.assert_equal(day_2.info, "How many roads must a man walk down?")
+        nt.assert_equal(day_2.comment,
+                        "The answer my friend, is blowing in the wind. "
+                        "The answer is blowing in the wind.")

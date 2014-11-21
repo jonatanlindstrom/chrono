@@ -3,6 +3,7 @@
 import nose.tools as nt
 import datetime
 from chrono import month
+from chrono import user
 from chrono import errors
 from chrono.day import DayType
 
@@ -20,6 +21,13 @@ class TestMonth(object):
                                month.Month,
                                "2014-09-01")
 
+    def test_empty_month(self):
+        month_1 = month.Month("2014-09")
+        nt.assert_equal(month_1.year, 2014)
+        nt.assert_equal(month_1.month, 9)
+        nt.assert_equal(month_1.next_workday(), "2014-09-01")
+        nt.assert_equal(month_1.next_month(), "2014-10")
+
     def test_add_day(self):
         month_1 = month.Month("2014-09")
         nt.assert_equal(len(month_1.days), 0)
@@ -31,20 +39,22 @@ class TestMonth(object):
             "incomplete.$",
             month_1.add_day,
             "2014-09-02")
-        day_1.report_start_time("8:45")
-        day_1.report_lunch_duration("0:30")
-        day_1.report_end_time("17:30")
+        day_1.report("8:45", "0:30", "17:30")
 
         day_2 = month_1.add_day("2014-09-02")
-        day_2.report_start_time("8:20")
-        day_2.report_lunch_duration("0:45")
-        day_2.report_end_time("17:10")
+        day_2.report("8:20", "0:45", "17:10")
         nt.assert_raises_regex(
             errors.ReportError,
             "^New work days must be added consecutively. Expected 2014-09-03, "
             "got 2014-09-04.$",
             month_1.add_day,
             "2014-09-04")
+
+        nt.assert_raises_regex(
+            errors.ReportError,
+            "^Date 2014-09-02 already added to month.$",
+            month_1.add_day,
+            "2014-09-02")
 
     def test_next_workday(self):
         month_1 = month.Month("2014-09")
@@ -84,63 +94,81 @@ class TestMonth(object):
         month_1.add_day("2013-12-31").report("08:00", "1:00", "17:00")
         nt.assert_equal(month_1.next_workday(), "2014-01-01")
 
-    def test_add_day_wrong_month(self):
+    def test_next_month(self):
         month_1 = month.Month("2014-09")
-        nt.assert_raises_regex(
-            errors.ReportError,
-            "^New date string didn't match month. 2014-09 doesn't include "
-            "2014-10-01.$",
-            month_1.add_day,
-            "2014-10-01")
+        nt.assert_equal(month_1.next_month(), "2014-10")
+        month_1 = month.Month("2014-10")
+        nt.assert_equal(month_1.next_month(), "2014-11")
+        month_1 = month.Month("2014-11")
+        nt.assert_equal(month_1.next_month(), "2014-12")
+        month_1 = month.Month("2014-12")
+        nt.assert_equal(month_1.next_month(), "2015-01")
 
     def test_flextime(self):
         month_1 = month.Month("2014-09")
         nt.assert_equal(month_1.calculate_flextime(), datetime.timedelta())
         day_1 = month_1.add_day("2014-09-01")
-        day_1.report_start_time("8:00")
-        day_1.report_lunch_duration("0:30")
-        day_1.report_end_time("17:00")
+        day_1.report("8:00", "0:30", "17:00")
         nt.assert_equal(month_1.calculate_flextime(),
                         datetime.timedelta(minutes=30))
 
         day_2 = month_1.add_day("2014-09-02")
-        day_2.report_start_time("9:00")
-        day_2.report_lunch_duration("1:00")
-        day_2.report_end_time("17:00")
+        day_2.report("9:00", "1:00", "17:00")
         nt.assert_equal(month_1.calculate_flextime(),
                         datetime.timedelta(minutes=-30))
 
         day_3 = month_1.add_day("2014-09-03")
-        day_3.report_start_time("8:00")
-        day_3.report_lunch_duration("0:45")
-        day_3.report_end_time("18:00")
+        day_3.report("8:00", "0:45", "18:00")
         nt.assert_equal(month_1.calculate_flextime(),
                         datetime.timedelta(minutes=45))
 
     def test_complete(self):
         month_1 = month.Month("2014-09")
         nt.assert_false(month_1.complete())
+        while month_1.next_workday().startswith("2014-09-"):
+            day_1 = month_1.add_day(month_1.next_workday())
+            day_1.report("8:00", "1:00", "17:00")
+        nt.assert_true(month_1.complete())
 
+        month_2 = month.Month("2014-12")
+        nt.assert_false(month_2.complete())
+        while month_2.next_workday().startswith("2014-12-"):
+            day_2 = month_2.add_day(month_2.next_workday())
+            day_2.report("8:00", "1:00", "17:00")
+        nt.assert_true(month_2.complete())
+        
     def test_register_holidays(self):
         month_1 = month.Month("2014-09")
-        month_1.add_day("2014-09-01").report("08:00", "1:00", "17:00")
+        day_1 = month_1.add_day("2014-09-01")
+        day_1.report("08:00", "1:00", "17:00")
         month_1.add_holiday("2014-09-01", "Random Acts of Kindness Day")
+        nt.assert_equal(day_1.get_info(), "Random Acts of Kindness Day")
         nt.assert_equal(month_1.calculate_flextime(),
                         datetime.timedelta(hours=8))
 
         month_1.add_holiday("2014-09-02", "Unbirthday")
         nt.assert_equal(month_1.next_workday(), "2014-09-03")
+        day_2 = month_1.add_day("2014-09-02")
+        nt.assert_equal(day_2.get_info(), "Unbirthday")
 
     def test_calulate_sickdays(self):
         month_1 = month.Month("2014-09")
         nt.assert_equal(month_1.sick_days(), 0)
         day_1 = month_1.add_day("2014-09-01")
-        day_1.day_type = DayType.sick_day
+        day_1.set_type(DayType.sick_day)
         nt.assert_equal(month_1.sick_days(), 1)
 
-    def test_alculate_used_vacation(self):
+    def test_calculate_used_vacation(self):
         month_1 = month.Month("2014-09")
         day_1 = month_1.add_day("2014-09-01")
         nt.assert_equal(month_1.used_vacation(), 0)
-        day_1.day_type = DayType.vacation
+        day_1.set_type(DayType.vacation)
         nt.assert_equal(month_1.used_vacation(), 1)
+
+    def test_calculate_used_vacation_for_date(self):
+        month_1 = month.Month("2014-09")
+        month_1.add_day("2014-09-01").set_type(DayType.vacation)
+        month_1.add_day("2014-09-02").set_type(DayType.vacation)
+        nt.assert_equal(month_1.used_vacation(date_string="2014-08-31"), 0)
+        nt.assert_equal(month_1.used_vacation(date_string="2014-09-01"), 1)
+        nt.assert_equal(month_1.used_vacation(date_string="2014-09-02"), 2)

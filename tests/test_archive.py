@@ -147,6 +147,8 @@ class TestArchive(object):
 
         month_archive.archive_month(month_1)
         nt.assert_raises_regex(errors.ReportError,
-                               "^Months must be archived sequentially.$",
+                               "^Months must be archived sequentially. "
+                               "Expected 2014-10, got 2014-11.$",
                                month_archive.archive_month,
                                month_2)
+
