@@ -28,7 +28,7 @@ def main():
     arguments = docopt(__doc__)
     if arguments['--verbose']:
         print(arguments)
-    config_path = os.path.expanduser("~/.chrono2")
+    config_path = os.path.expanduser("~/.chrono")
     config = get_config(config_path)
     reconfigured = False
     if 'Data' not in config['Paths']:
