@@ -3,7 +3,6 @@
 import nose.tools as nt
 import datetime
 from chrono import month
-from chrono import user
 from chrono import errors
 from chrono.day import DayType
 
@@ -16,10 +15,10 @@ class TestMonth(object):
         pass
 
     def test_bad_month(self):
-        nt.assert_raises_regex(errors.BadDateError,
-                               "^Bad date string: \"2014-09-01\"$",
-                               month.Month,
-                               "2014-09-01")
+        nt.assert_raises_regexp(errors.BadDateError,
+                                "^Bad date string: \"2014-09-01\"$",
+                                month.Month,
+                                "2014-09-01")
 
     def test_empty_month(self):
         month_1 = month.Month("2014-09")
@@ -33,7 +32,7 @@ class TestMonth(object):
         nt.assert_equal(len(month_1.days), 0)
         day_1 = month_1.add_day("2014-09-01")
         nt.assert_equal(len(month_1.days), 1)
-        nt.assert_raises_regex(
+        nt.assert_raises_regexp(
             errors.ReportError,
             "^New days can't be added while the report for a previous day is "
             "incomplete.$",
@@ -43,14 +42,14 @@ class TestMonth(object):
 
         day_2 = month_1.add_day("2014-09-02")
         day_2.report("8:20", "0:45", "17:10")
-        nt.assert_raises_regex(
+        nt.assert_raises_regexp(
             errors.ReportError,
             "^New work days must be added consecutively. Expected 2014-09-03, "
             "got 2014-09-04.$",
             month_1.add_day,
             "2014-09-04")
 
-        nt.assert_raises_regex(
+        nt.assert_raises_regexp(
             errors.ReportError,
             "^Date 2014-09-02 already added to month.$",
             month_1.add_day,

@@ -7,14 +7,19 @@ from chrono import day
 from chrono import year
 from chrono import errors
 
+
 class User(object):
     def __init__(self, name="", employed_date=None, employment=100,
                  payed_vacation=0, vacation_month=1, extra_vacation=0):
         self.name = name
         self.years = []
         if employed_date is not None:
-            self.employed_date = datetime.strptime(employed_date, "%Y-%m-%d").date()
-            self.years.append(year.Year(str(self.employed_date.year), start_date=self.employed_date.isoformat()))
+            self.employed_date = datetime.strptime(
+                employed_date, "%Y-%m-%d").date()
+
+            self.years.append(year.Year(
+                str(self.employed_date.year),
+                start_date=self.employed_date.isoformat()))
         else:
             self.employed_date = None
         self.employment = employment
@@ -39,13 +44,21 @@ class User(object):
 
     def add_year(self, year_object):
         if len(year_object.months) != 0:
-            raise errors.YearError("Added year can't contain any reported days.")
-        elif len(self.years) > 0 and year_object.year != self.current_year().year and not self.current_year().complete():
-            raise errors.YearError("Previous year ({}) must be completed first.".format(self.current_year().year))
-        if len(self.years) > 0 and year_object.year == self.current_year().year:
+            raise errors.YearError(
+                "Added year can't contain any reported days.")
+
+        elif (len(self.years) > 0 and
+              year_object.year != self.current_year().year and
+              not self.current_year().complete()):
+            raise errors.YearError(
+                "Previous year ({}) must be completed first.".format(
+                    self.current_year().year))
+
+        if (len(self.years) > 0 and
+                year_object.year == self.current_year().year):
             self.years[-1] = year_object
         else:
-            year_object.start_date=self.employed_date
+            year_object.start_date = self.employed_date
             self.years.append(year_object)
 
     def next_workday(self):
@@ -91,7 +104,6 @@ class User(object):
         else:
             today = datetime.strptime(date_string, "%Y-%m-%d").date()
 
-
         first_vacation_month = date(
             self.employed_date.year + (
                 self.employed_date.month > self.vacation_month),
@@ -100,7 +112,7 @@ class User(object):
 
         years_worked = 0
         if today >= first_vacation_month:
-            years_worked +=  (
+            years_worked += (
                 (first_vacation_month.month -
                  self.employed_date.month) % 12) / 12
 
@@ -123,9 +135,10 @@ class User(object):
                 for day in month.days]
 
     def __str__(self):
-        user_string  = """{user.name}
+        user_string = """{user.name}
 {}
 Employment: {user.employment} %
 Employed date: {user.employed_date}
-Vacation month: {user.vacation_month}""".format("-" * len(self.name), user=self)
+Vacation month: {user.vacation_month}""".format(
+            "-" * len(self.name), user=self)
         return user_string

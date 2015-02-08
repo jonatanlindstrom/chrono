@@ -15,7 +15,7 @@ class DayType(Enum):
 
 
 class Day(object):
-    def __init__(self, date_string, user=None):
+    def __init__(self, date_string):
         try:
             self.date = datetime.datetime.strptime(
                 date_string, "%Y-%m-%d").date()
@@ -135,19 +135,20 @@ class Day(object):
         if end_time is None:
             if (self.start_time is None or self.lunch_duration is None or
                     self.end_time is None):
-                hours = datetime.timedelta()
+                total_hours = datetime.timedelta()
             else:
-                hours = (self.end_time - self.start_time - self.lunch_duration -
-                         self.deviation)
+                total_hours = self.end_time - self.start_time
+                total_hours -= self.lunch_duration
+                total_hours -= self.deviation
         else:
             if self.start_time is None or self.complete():
                 raise errors.ChronoError("Custom end times can only be tried "
                                          "on days in progress.")
             else:
-                print(self.deviation)
-                hours = (end_time - self.start_time - (self.lunch_duration or datetime.timedelta())-
-                         self.deviation)
-        return hours
+                total_hours = end_time - self.start_time
+                total_hours -= (self.lunch_duration or datetime.timedelta())
+                total_hours -= self.deviation
+        return total_hours
 
     def calculate_flextime(self):
         if self.complete():
@@ -180,7 +181,9 @@ class Day(object):
         width_label = 20
         width_value = 17
         value = "{day.date} - {}".format(self.date.strftime("%A"), day=self)
-        string = """\n{:^{width}}\n""".format(value, width=width_label + width_value)
+        string = """\n{:^{width}}\n""".format(
+            value, width=width_label + width_value)
+
         if self.day_type == DayType.working_day:
             string += "-" * (width_label + width_value)
             string += "\n{:<{width}}".format("Start time:", width=width_label)
@@ -194,7 +197,7 @@ class Day(object):
                     int(self.lunch_duration.total_seconds() // 3600),
                     int(self.lunch_duration.total_seconds() % 3600 // 60))
 
-                string +=  "{:>{width}}".format(value, width=width_value)
+                string += "{:>{width}}".format(value, width=width_value)
 
             string += "\n{:<{width}}".format("Deviation:", width=width_label)
             if self.deviation > datetime.timedelta():
@@ -202,20 +205,27 @@ class Day(object):
                     int(self.lunch_duration.total_seconds() // 3600),
                     int(self.lunch_duration.total_seconds() % 3600 // 60))
 
-                string +=  "{:>{width}}".format(value, width=width_value)
+                string += "{:>{width}}".format(value, width=width_value)
 
             string += "\n{:<{width}}".format("End time:", width=width_label)
             if self.end_time:
                 value = self.end_time.strftime("%H:%M")
                 string += "{:>{width}}".format(value, width=width_value)
             string += "\n{}".format("-" * (width_label + width_value))
-            string += "\n{:<{width}}".format("Worked hours:", width=width_label)
+            string += "\n{:<{width}}".format(
+                "Worked hours:", width=width_label)
+
             if self.complete():
                 worked_hours = self.worked_hours()
             else:
-                worked_hours = self.worked_hours(end_time=datetime.datetime.now())
-            value = "{:}:{:02}".format(int(worked_hours.total_seconds() // 3600), int(worked_hours.total_seconds() % 3600 // 60))
-            string +=  "{:>{width}}".format(value, width=width_value)
+                worked_hours = self.worked_hours(
+                    end_time=datetime.datetime.now())
+
+            value = "{:}:{:02}".format(
+                int(worked_hours.total_seconds() // 3600),
+                int(worked_hours.total_seconds() % 3600 // 60))
+
+            string += "{:>{width}}".format(value, width=width_value)
             if not self.complete():
                 string += " ..."
             string += "\n"

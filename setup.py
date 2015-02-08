@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from setuptools import setup, find_packages
+from setuptools import setup
 
 setup(name='chrono',
       version='1.0b1',
@@ -9,9 +9,8 @@ setup(name='chrono',
                   "readable text files.",
       author='Jonatan Lindström',
       author_email='jonatanlindstromd@gmail.com',
-      install_requires=["docopt"],
+      install_requires=["docopt", "nose"],
       packages=['chrono'],
       entry_points={
               "console_scripts": ["chrono = chrono.chrono:main"]
-          }
-     )
+      })

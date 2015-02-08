@@ -1,13 +1,12 @@
 # -*- coding: utf-8 -*-
 
 import nose.tools as nt
-import os
-import tempfile
 import datetime
 from chrono import user
 from chrono import day
 from chrono import year
 from chrono import errors
+
 
 class TestParseUserFile(object):
     def setup(self):
@@ -66,7 +65,9 @@ class TestParseUserFile(object):
         user_1 = user.User(employed_date="2014-12-01")
         nt.assert_equal(user_1.current_year().year, 2014)
         while user_1.next_workday() != "2015-01-02":
-            user_1.add_day(user_1.next_workday()).report("8:00", "1:00", "17:00")
+            user_1.add_day(user_1.next_workday()).report(
+                "8:00", "1:00", "17:00")
+
         nt.assert_equal(user_1.current_year().year, 2015)
 
     def test_current_month(self):
@@ -75,7 +76,9 @@ class TestParseUserFile(object):
         user_1.add_day(user_1.next_workday()).report("8:00", "1:00", "17:00")
         nt.assert_equal(user_1.current_month().month, 1)
         while user_1.next_workday() != "2015-02-03":
-            user_1.add_day(user_1.next_workday()).report("8:00", "1:00", "17:00")
+            user_1.add_day(user_1.next_workday()).report(
+                "8:00", "1:00", "17:00")
+
         nt.assert_equal(user_1.current_month().month, 2)
 
     def test_today(self):
@@ -141,7 +144,7 @@ class TestParseUserFile(object):
         nt.assert_equal(len(user_1.years), 1)
         nt.assert_true(user_1.years[0], year_1)
         year_2 = year.Year("2015")
-        nt.assert_raises_regex(
+        nt.assert_raises_regexp(
             errors.YearError,
             "Previous year \(2014\) must be completed first.",
             user_1.add_year,
@@ -150,17 +153,17 @@ class TestParseUserFile(object):
         user_2 = user.User(employed_date="2014-09-01")
         year_3 = year.Year("2014")
         year_3.add_day("2014-01-01")
-        nt.assert_raises_regex(errors.YearError,
-                               "Added year can't contain any reported days.",
-                               user_2.add_year,
-                               year_3)
+        nt.assert_raises_regexp(errors.YearError,
+                                "Added year can't contain any reported days.",
+                                user_2.add_year,
+                                year_3)
         
         user_3 = user.User(employed_date="2014-09-01")
         user_3.years[0].add_holiday("2014-01-01", "New Years Day")
-        nt.assert_raises_regex(errors.YearError,
-                               "Added year can't contain any reported days.",
-                               user_2.add_year,
-                               year_3)
+        nt.assert_raises_regexp(errors.YearError,
+                                "Added year can't contain any reported days.",
+                                user_2.add_year,
+                                year_3)
 
     def test_vacation_left(self):
         user_1 = user.User(payed_vacation=30, vacation_month=1,

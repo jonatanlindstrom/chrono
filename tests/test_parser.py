@@ -7,17 +7,20 @@ import tempfile
 from chrono.parser import Parser
 from chrono import errors
 
+
 def save_month_file(string, file_name, folder):
     full_path = os.path.join(folder, file_name)
     with open(full_path, "w") as month_file:
         month_file.write(string)
     return full_path
 
+
 def save_archive_file(string, folder):
     full_path = os.path.join(folder, "archive.txt")
     with open(full_path, "w") as month_file:
         month_file.write(string)
     return full_path
+
 
 def save_year_file(string, year, folder):
     full_path = os.path.join(folder, "{}.conf".format(year))
@@ -119,7 +122,9 @@ class TestParserMonthFile(object):
             "1. 8:00 1:00 17:00 0:30\n", "2014-10.txt", self.temp_dir.name)
 
         month_1 = file_parser.parse_month_file(file_name)
-        nt.assert_equal(month_1.days[0].deviation, datetime.timedelta(minutes=30))
+        nt.assert_equal(month_1.days[0].deviation,
+                        datetime.timedelta(minutes=30))
+
         nt.assert_equal(month_1.days[0].worked_hours(),
                         datetime.timedelta(hours=7, minutes=30))
 
@@ -292,19 +297,19 @@ class TestParserMonthFile(object):
         file_name = save_month_file(
             file_content_1, "2014-09.txt", self.temp_dir.name)
 
-        nt.assert_raises_regex(errors.ParseError,
-                               "No endquote in comment for date 2014-09-02.",
-                               file_parser.parse_month_file,
-                               file_name)
+        nt.assert_raises_regexp(errors.ParseError,
+                                "No endquote in comment for date 2014-09-02.",
+                                file_parser.parse_month_file,
+                                file_name)
 
         file_content_2 = "1. 8:00 'Bad comment\""
         file_name = save_month_file(
             file_content_2, "2014-09.txt", self.temp_dir.name)
 
-        nt.assert_raises_regex(errors.ParseError,
-                               "No endquote in comment for date 2014-09-01.",
-                               file_parser.parse_month_file,
-                               file_name)
+        nt.assert_raises_regexp(errors.ParseError,
+                                "No endquote in comment for date 2014-09-01.",
+                                file_parser.parse_month_file,
+                                file_name)
 
     def test_parse_bad_date(self):
         file_parser = Parser()
@@ -312,26 +317,26 @@ class TestParserMonthFile(object):
         file_name = save_month_file(
             file_content_1, "2014-09.txt", self.temp_dir.name)
 
-        nt.assert_raises_regex(errors.ParseError,
-                               "Could not parse date in 2014-09: \"1\"",
-                               file_parser.parse_month_file,
-                               file_name)
+        nt.assert_raises_regexp(errors.ParseError,
+                                "Could not parse date in 2014-09: \"1\"",
+                                file_parser.parse_month_file,
+                                file_name)
 
         file_content_2 = "1:"
         file_name = save_month_file(
             file_content_2, "2014-10.txt", self.temp_dir.name)
 
-        nt.assert_raises_regex(errors.ParseError,
-                               "Could not parse date in 2014-10: \"1:\"",
-                               file_parser.parse_month_file,
-                               file_name)
+        nt.assert_raises_regexp(errors.ParseError,
+                                "Could not parse date in 2014-10: \"1:\"",
+                                file_parser.parse_month_file,
+                                file_name)
 
     def test_parse_bad_time(self):
         file_parser = Parser()
         file_name = save_month_file(
             "1. 8.00", "2014-09.txt", self.temp_dir.name)
 
-        nt.assert_raises_regex(
+        nt.assert_raises_regexp(
             errors.ParseError,
             "Could not parse start time for date 2014-09-01: \"8.00\"",
             file_parser.parse_month_file,
@@ -340,7 +345,7 @@ class TestParserMonthFile(object):
         file_name = save_month_file(
             "1. 8", "2014-10.txt", self.temp_dir.name)
 
-        nt.assert_raises_regex(
+        nt.assert_raises_regexp(
             errors.ParseError,
             "Could not parse start time for date 2014-10-01. Time must be "
             "given in hours and minutes, got \"8\".",
@@ -350,14 +355,13 @@ class TestParserMonthFile(object):
         file_name = save_month_file(
             "1. 9", "2014-09.txt", self.temp_dir.name)
 
-        nt.assert_raises_regex(
+        nt.assert_raises_regexp(
             errors.ParseError,
             "Could not parse start time for date 2014-09-01. Time must be "
             "given in hours and minutes, got \"9\".",
             file_parser.parse_month_file,
             file_name)
         
-
 
 class TestParserArchiveFile(object):
     def setup(self):
@@ -419,6 +423,7 @@ class TestParserArchiveFile(object):
 
         nt.assert_true(archive_1.next_month, "2015-02")
 
+
 class TestParserYearConfiguration(object):
     def setup(self):
         self.temp_dir = tempfile.TemporaryDirectory()
@@ -457,6 +462,7 @@ class TestParserYearConfiguration(object):
 
         nt.assert_equal(year_1.holidays["2014-04"]["2014-04-21"],
                         "Easter monday")
+
 
 class TestParserUserConfiguration(object):
     def setup(self):
@@ -517,7 +523,6 @@ Employed date: 2012-01-01"""
                         datetime.datetime(year=2013, month=4, day=1).date())
 
     def test_bad_user_file(self):
-        file_parser = Parser()
         pass
 
     def test_parse_user_year_month(self):

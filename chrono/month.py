@@ -20,7 +20,7 @@ class Month(object):
         self.user = user
 
     def add_day(self, date_string):
-        new_day = Day(date_string, user=self.user)
+        new_day = Day(date_string)
         if new_day.date.year != self.year or new_day.date.month != self.month:
             raise errors.ReportError("New date string didn't match month. "
                                      "{}-{:02d} doesn't include {}.".format(
@@ -28,7 +28,8 @@ class Month(object):
 
         for old_day in self.days:
             if new_day.date == old_day.date:
-                raise errors.ReportError("Date 2014-09-02 already added to month.")
+                raise errors.ReportError(
+                    "Date 2014-09-02 already added to month.")
             if not old_day.complete():
                 raise errors.ReportError("New days can't be added while the "
                                          "report for a previous day is "
@@ -49,9 +50,9 @@ class Month(object):
         return new_day
 
     def complete(self):
-        return (not self.next_workday().startswith("{}-{:02d}".format(
-                    self.year, self.month))
-                and self.days[-1].complete())
+        date_string = "{}-{:02d}".format(self.year, self.month)
+        return (not self.next_workday().startswith(date_string) and
+                self.days[-1].complete())
 
     def next_workday(self):
         if len(self.days) == 0:

@@ -6,6 +6,7 @@ from chrono import year
 from chrono import errors
 from chrono.day import DayType
 
+
 class TestYear(object):
     def setup(self):
         pass
@@ -88,7 +89,7 @@ class TestYear(object):
 
     def test_add_day_wrong(self):
         year_1 = year.Year("2014")
-        nt.assert_raises_regex(
+        nt.assert_raises_regexp(
             errors.ReportError,
             "^New date string didn't match year. 2014 doesn't include "
             "2015-01-01.$",
@@ -96,7 +97,7 @@ class TestYear(object):
             "2015-01-01")
 
         year_1 = year.Year("2015")
-        nt.assert_raises_regex(
+        nt.assert_raises_regexp(
             errors.ReportError,
             "^New date string didn't match year. 2015 doesn't include "
             "2014-01-01.$",
@@ -146,61 +147,61 @@ class TestYear(object):
                         datetime.timedelta(hours=8))
 
     def test_add_year_with_bad_arguments(self):
-        nt.assert_raises_regex(
+        nt.assert_raises_regexp(
             errors.BadDateError,
             "Argument year_string must be a string, was \"int\"\.",
             year.Year,
             2014)
 
-        nt.assert_raises_regex(
+        nt.assert_raises_regexp(
             errors.BadDateError,
             "Argument year_string must be a string, was \"datetime\"\.",
             year.Year,
             datetime.datetime(year=2014, month=1, day=1))
 
-        nt.assert_raises_regex(
+        nt.assert_raises_regexp(
             errors.BadDateError,
             "Argument year_string must be a year \(e\.g\. \"YYYY\"\), was "
             "\"Twenty fourteen\"\.",
             year.Year,
             "Twenty fourteen")
 
-        nt.assert_raises_regex(
+        nt.assert_raises_regexp(
             errors.BadDateError,
             "Argument year_string must be a year \(e\.g\. \"YYYY\"\), was "
             "\"14\"\.",
             year.Year,
             "14")
 
-        nt.assert_raises_regex(
+        nt.assert_raises_regexp(
             errors.BadDateError,
             "Argument flextime must be a timedelta object, was \"int\"\.",
             year.Year,
             "2014",
             flextime=5)
 
-        nt.assert_raises_regex(
+        nt.assert_raises_regexp(
             errors.BadDateError,
             "Argument flextime must be a timedelta object, was \"str\"\.",
             year.Year,
             "2014",
             flextime="5 hours")
 
-        nt.assert_raises_regex(
+        nt.assert_raises_regexp(
             errors.BadDateError,
             "Argument start_date must be a string, was \"datetime\"\.",
             year.Year,
             "2014",
             start_date=datetime.datetime(year=2014, month=4, day=1))
 
-        nt.assert_raises_regex(
+        nt.assert_raises_regexp(
             errors.BadDateError,
             "Argument start_date must be a string, was \"int\"\.",
             year.Year,
             "2014",
             start_date=2)
 
-        nt.assert_raises_regex(
+        nt.assert_raises_regexp(
             errors.BadDateError,
             "Argument start_date must be a ISO date string \(e\.g\. "
             "\"YYYY-MM-DD\", was \"1/4 2014\".",
@@ -208,7 +209,7 @@ class TestYear(object):
             "2014",
             start_date="1/4 2014")
 
-        nt.assert_raises_regex(
+        nt.assert_raises_regexp(
             errors.BadDateError,
             "Argument start_date must be a ISO date string \(e\.g\. "
             "\"YYYY-MM-DD\", was \"4/1/2014\".",

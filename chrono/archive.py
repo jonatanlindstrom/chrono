@@ -26,8 +26,8 @@ class Archive(object):
                 raise errors.ReportError("Month {}-{} is allready archived."
                                          .format(month.year, month.month))
 
-        if (self.next_month() != "" and
-                "{}-{:02d}".format(month.year, month.month) != self.next_month()):
+        date_string = "{}-{:02d}".format(month.year, month.month)
+        if self.next_month() != "" and date_string != self.next_month():
             raise errors.ReportError(
                 "Months must be archived sequentially. Expected {}, got "
                 "{}-{:02d}.".format(

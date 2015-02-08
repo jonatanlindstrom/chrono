@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-import datetime
 import re
 import os
 from chrono.day import DayType
@@ -37,7 +36,8 @@ class Parser(object):
             match = comment_pattern.search(line)
             if match:
                 comment = match.group(1)
-                #remove comment
+
+                # remove comment
                 line = comment_pattern.sub("", line)
             else:
                 comment = None
@@ -60,7 +60,7 @@ class Parser(object):
             while line_tokens:
                 token = line_tokens.pop(0)
                 if sick_pattern.match(token):
-                     parsed_day.set_type(DayType.sick_day)
+                    parsed_day.set_type(DayType.sick_day)
                 elif vacation_pattern.match(token):
                     parsed_day.set_type(DayType.vacation)
                 else:
@@ -121,7 +121,7 @@ class Parser(object):
         if self.user is None:
             return parsed_month
         else:
-            return  self.user.years[-1].months[-1]
+            return self.user.years[-1].months[-1]
 
     def parse_archive_file(self, file_name):
         parsed_archive = Archive()
@@ -143,7 +143,9 @@ class Parser(object):
         year = os.path.splitext(os.path.basename(file_name))[0]
         if self.user is not None:
             if self.user.employed_date.year == int(year):
-                parsed_year = Year(year, start_date=self.user.employed_date.isoformat())
+                parsed_year = Year(
+                    year, start_date=self.user.employed_date.isoformat())
+
             elif len(self.user.years) == 0:
                 raise Exception
             else:
@@ -153,7 +155,10 @@ class Parser(object):
         with open(file_name, "r") as year_file:
             year_string = year_file.read()
 
-        holiday_pattern = re.compile("^\s*(\d{4}-\d{2}-\d{2})\s*:\s+([\"\'].*[\"\'])\s*$", flags=re.MULTILINE)
+        holiday_pattern = re.compile(
+            "^\s*(\d{4}-\d{2}-\d{2})\s*:\s+([\"\'].*[\"\'])\s*$",
+            flags=re.MULTILINE)
+
         comment_pattern = re.compile("#.*$", flags=re.MULTILINE)
 
         year_string = comment_pattern.sub("", year_string)
@@ -172,7 +177,8 @@ class Parser(object):
         name_pattern = re.compile(
             "^\s*[Nn]ame\s*:\s*(\w+\s\w+)\s*$", flags=re.MULTILINE)
         
-        employment_pattern = re.compile("^\s*[Ee]mployment\s*:\s*(\d+)\s*%\s*$", flags=re.MULTILINE)
+        employment_pattern = re.compile(
+            "^\s*[Ee]mployment\s*:\s*(\d+)\s*%\s*$", flags=re.MULTILINE)
         
         payed_vacation_pattern = re.compile(
             "^\s*[Pp]ayed\s*[Vv]acation\s*:\s*(\d+)\s*$", flags=re.MULTILINE)
@@ -214,4 +220,3 @@ class Parser(object):
 
         self.user = parsed_user
         return self.user
-    
