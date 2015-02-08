@@ -465,7 +465,7 @@ class TestParserUserConfiguration(object):
     def teardown(self):
         pass
 
-    def test_read_user_file_one_user(self):
+    def test_read_user_file(self):
         file_parser = Parser()
         user_string = """Name: Jane Doe
 Employment: 100 %
@@ -549,4 +549,16 @@ Employed date: 2014-01-01"""
 
         month_1 = file_parser.parse_month_file(file_name_3)
         nt.assert_true(file_parser.user.years[0].months[0] is month_1)
-        
+
+    def test_read_user_file_extra_vacation(self):
+        file_parser = Parser()
+        user_string = """Name: Michael Palin
+Employment: 100 %
+Payed vacation: 30
+Extra vacation: 30
+Vacation month: 04
+Employed date: 2014-06-01"""
+
+        file_name_1 = save_user_file(user_string, self.temp_dir.name)
+        user_1 = file_parser.parse_user_file(file_name_1)
+        nt.assert_equal(user_1.vacation_left(), 30)

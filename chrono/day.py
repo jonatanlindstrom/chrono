@@ -95,7 +95,7 @@ class Day(object):
     def report_deviation(self, deviation):
         match = re.match("^(\d{1,2})(?::(\d{2}))?$", deviation)
         if match:
-            self.deviation = -datetime.timedelta(
+            self.deviation = datetime.timedelta(
                 hours=int(match.group(1)), minutes=int(match.group(2) or 0))
         else:
             raise errors.ReportError("Bad deviation for date {}: '{}'".format(
@@ -125,14 +125,28 @@ class Day(object):
             expected_hours = datetime.timedelta(hours=0)
         return expected_hours
 
-    def worked_hours(self):
-        if (self.start_time is None or self.lunch_duration is None or
-                self.end_time is None):
-            hours = datetime.timedelta()
+    def worked_hours(self, end_time=None):
+        """Calculate worked hours for a working day.
+        :type end_time datetime.datetime:  If the day has no end time, a custom
+                                           end time can be supplied.
+        :rtype: datetime.timedelta
+        :raises: errors.ChronoError
+        """
+        if end_time is None:
+            if (self.start_time is None or self.lunch_duration is None or
+                    self.end_time is None):
+                hours = datetime.timedelta()
+            else:
+                hours = (self.end_time - self.start_time - self.lunch_duration -
+                         self.deviation)
         else:
-            hours = (self.end_time - self.start_time - self.lunch_duration +
-                     self.deviation)
-    
+            if self.start_time is None or self.complete():
+                raise errors.ChronoError("Custom end times can only be tried "
+                                         "on days in progress.")
+            else:
+                print(self.deviation)
+                hours = (end_time - self.start_time - (self.lunch_duration or datetime.timedelta())-
+                         self.deviation)
         return hours
 
     def calculate_flextime(self):
@@ -161,3 +175,51 @@ class Day(object):
                 info += "."
         combined = " ".join([text for text in (info, self.comment) if text])
         return combined
+
+    def __str__(self):
+        width_label = 20
+        width_value = 17
+        value = "{day.date} - {}".format(self.date.strftime("%A"), day=self)
+        string = """\n{:^{width}}\n""".format(value, width=width_label + width_value)
+        if self.day_type == DayType.working_day:
+            string += "-" * (width_label + width_value)
+            string += "\n{:<{width}}".format("Start time:", width=width_label)
+            if self.start_time:
+                value = self.start_time.strftime("%H:%M")
+                string += "{:>{width}}".format(value, width=width_value)
+
+            string += "\n{:<{width}}".format("Lunch:", width=width_label)
+            if self.lunch_duration:
+                value = "{:}:{:02}".format(
+                    int(self.lunch_duration.total_seconds() // 3600),
+                    int(self.lunch_duration.total_seconds() % 3600 // 60))
+
+                string +=  "{:>{width}}".format(value, width=width_value)
+
+            string += "\n{:<{width}}".format("Deviation:", width=width_label)
+            if self.deviation > datetime.timedelta():
+                value = "{:}:{:02}".format(
+                    int(self.lunch_duration.total_seconds() // 3600),
+                    int(self.lunch_duration.total_seconds() % 3600 // 60))
+
+                string +=  "{:>{width}}".format(value, width=width_value)
+
+            string += "\n{:<{width}}".format("End time:", width=width_label)
+            if self.end_time:
+                value = self.end_time.strftime("%H:%M")
+                string += "{:>{width}}".format(value, width=width_value)
+            string += "\n{}".format("-" * (width_label + width_value))
+            string += "\n{:<{width}}".format("Worked hours:", width=width_label)
+            if self.complete():
+                worked_hours = self.worked_hours()
+            else:
+                worked_hours = self.worked_hours(end_time=datetime.datetime.now())
+            value = "{:}:{:02}".format(int(worked_hours.total_seconds() // 3600), int(worked_hours.total_seconds() % 3600 // 60))
+            string +=  "{:>{width}}".format(value, width=width_value)
+            if not self.complete():
+                string += " ..."
+            string += "\n"
+        if self.info or self.comment:
+            string += "\n{}\n".format(self.get_info())
+
+        return string

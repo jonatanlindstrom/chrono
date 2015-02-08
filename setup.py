@@ -4,7 +4,7 @@
 from setuptools import setup, find_packages
 
 setup(name='chrono',
-      version='2014.1.x',
+      version='1.0b1',
       description="Tool for quick and simple work time tracking using human "
                   "readable text files.",
       author='Jonatan Lindström',

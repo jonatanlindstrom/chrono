@@ -201,7 +201,7 @@ class TestDay(object):
             day_1.report_end_time,
             "17:00:00")
 
-    def test_actual_hours(self):
+    def test_worked_hours(self):
         day_1 = day.Day("2014-09-01")
         nt.assert_equal(day_1.worked_hours(), datetime.timedelta())
 
@@ -216,6 +216,39 @@ class TestDay(object):
         day_2.report_end_time("16:50")
         nt.assert_equal(day_2.worked_hours(),
                         datetime.timedelta(hours=8, minutes=10))
+
+    def test_worked_hours_custom_end_time(self):
+        day_1 = day.Day("2014-09-01")
+        nt.assert_raises_regexp(
+            errors.ChronoError,
+            "Custom end times can only be tried on days in progress.",
+            day_1.worked_hours,
+            end_time=datetime.datetime(2014, 9, 1, hour=17))
+
+        day_1.report_start_time("8:00")
+        nt.assert_equal(
+            day_1.worked_hours(
+                end_time=datetime.datetime(2014, 9, 1, hour=16, minute=30)),
+            datetime.timedelta(hours=8, minutes=30))
+
+        day_1.report_lunch_duration("0:30")
+        nt.assert_equal(
+            day_1.worked_hours(
+                end_time=datetime.datetime(2014, 9, 1, hour=16, minute=30)),
+            datetime.timedelta(hours=8))
+
+        day_1.report_deviation("0:45")
+        nt.assert_equal(
+            day_1.worked_hours(
+                end_time=datetime.datetime(2014, 9, 1, hour=16, minute=30)),
+            datetime.timedelta(hours=7, minutes=15))
+
+        day_1.report_end_time("17:00")
+        nt.assert_raises_regexp(
+            errors.ChronoError,
+            "Custom end times can only be tried on days in progress.",
+            day_1.worked_hours,
+            end_time=datetime.datetime(2014, 9, 1, hour=16, minute=30))
 
     def test_flextime(self):
         day_1 = day.Day("2014-09-01")

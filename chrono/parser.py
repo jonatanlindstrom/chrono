@@ -183,12 +183,17 @@ class Parser(object):
         employed_date_pattern = re.compile(
             "^\s*[Ee]mployed\s*[Dd]ate\s*:\s*(\d{4}-\d{2}-\d{2})\s*$",
             flags=re.MULTILINE)
+
+        extra_vacation_pattern = re.compile(
+            "^\s*[Ee]xtra\s*[Vv]acation\s*:\s*(\d+)\s*$",
+            flags=re.MULTILINE)
         
         name_match = name_pattern.search(user_string)
         employment_match = employment_pattern.search(user_string)
         payed_vacation_match = payed_vacation_pattern.search(user_string)
         vacation_month_match = vacation_month_pattern.search(user_string)
         employed_date_match = employed_date_pattern.search(user_string)
+        extra_vacation_match = extra_vacation_pattern.search(user_string)
         
         if employed_date_match:
             employed_date = employed_date_match.group(1)
@@ -204,6 +209,8 @@ class Parser(object):
             parsed_user.payed_vacation = int(payed_vacation_match.group(1))
         if vacation_month_match:
             parsed_user.vacation_month = int(vacation_month_match.group(1))
+        if extra_vacation_match:
+            parsed_user.extra_vacation = int(extra_vacation_match.group(1))
 
         self.user = parsed_user
         return self.user
