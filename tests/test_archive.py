@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 
-import nose.tools as nt
 import datetime
+
+import nose.tools as nt
+
 from chrono import archive
 from chrono import month
 from chrono import errors
