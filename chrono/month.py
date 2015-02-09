@@ -2,8 +2,10 @@
 
 import datetime
 import re
+
 from chrono import errors
 from chrono.day import Day, DayType
+from chrono.time_utilities import pretty_timedelta
 
 
 class Month(object):
@@ -104,3 +106,35 @@ class Month(object):
     def sick_days(self):
         return len([day for day in self.days
                     if day.day_type == DayType.sick_day])
+
+    def __str__(self):
+        width = 37
+        month_string = "{month.year}-{month.month:02} - {name}".format(
+            month=self,
+            name=datetime.datetime(self.year, self.month, 1).strftime("%B"))
+
+        string = "\n{:^{width}}".format(month_string, width=width)
+        string += "\n{}".format("-" * width)
+        for day in self.days:
+            if day.day_type == DayType.working_day:
+                string += "\n{:>2}.{:>7}{:>6}{:>7}{:>7}{:>7}  {}".format(
+                    day.date.day,
+                    day.start_time.strftime('%H:%M'),
+                    pretty_timedelta(day.lunch_duration),
+                    day.end_time.strftime('%H:%M') if day.end_time else "",
+                    pretty_timedelta(
+                        day.deviation, signed=True) if day.deviation else "",
+                    pretty_timedelta(day.calculate_flextime(), signed=True),
+                    day.comment or "")
+            elif day.day_type == DayType.vacation:
+                string += "\n{:>2}.  {:^{width}}".format(
+                    day.date.day, "V a c a t i o n", width=18)
+
+            elif day.day_type == DayType.sick_day:
+                string += "\n{:>2}.  {:^{width}}".format(
+                    day.date.day, "S i c k   d a y", width=18)
+        string += "\n{}".format("-" * width)
+        string += "\n{:>{width}}\n".format(
+            pretty_timedelta(self.calculate_flextime(), signed=True),
+            width=width)
+        return string
