@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
 
-import nose.tools as nt
 import os
 import datetime
 import tempfile
+
+import nose.tools as nt
+
 from chrono.parser import Parser
 from chrono import errors
 

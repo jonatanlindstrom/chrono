@@ -19,9 +19,11 @@ import datetime
 import locale
 import statistics as st
 import configparser
+
 from docopt import docopt
+
 from chrono.parser import Parser
-from chrono.day import DayType
+from chrono.time_utilities import pretty_timedelta
 from chrono import errors
 
 
@@ -120,9 +122,8 @@ def main():
                                   if m.month == month][0]
             else:
                 selected_month = parser.user.years[-1].months[-1]
-            print()
-            _print_month(selected_month)
-            print("\nTotal flextime: {}".format(_pretty_timedelta(
+            print(selected_month)
+            print("\nTotal flextime: {}".format(pretty_timedelta(
                 parser.user.calculate_flextime(), signed=True)))
 
         elif arguments['year']:
@@ -132,8 +133,7 @@ def main():
             else:
                 selected_year = parser.user.years[-1]
             for month in selected_year.months:
-                _print_month(month)
-                print()
+                print(month)
         elif arguments['user']:
             print()
             print(parser.user)
@@ -209,52 +209,6 @@ def main():
 
     if reconfigured:
         write_config(config, config_path)
-
-
-def _print_month(month):
-    width = 37
-    month_string = "{m.year}-{m.month:02} - {name}".format(
-        m=month,
-        name=datetime.datetime(month.year, month.month, 1).strftime("%B"))
-
-    print("{:^{width}}".format(month_string, width=width))
-    print("-" * width)
-    for day in month.days:
-        if day.day_type == DayType.working_day:
-            print("{:>2}.  {}  {}  {}  {:>5}  {}  {}".format(
-                day.date.day,
-                day.start_time.strftime('%H:%M'), 
-                _pretty_timedelta(day.lunch_duration),
-                day.end_time.strftime('%H:%M'),
-                _pretty_timedelta(day.deviation, signed=True) if day.deviation != datetime.timedelta() else "",
-                _pretty_timedelta(day.calculate_flextime(), signed=True),
-                day.comment or ""))
-        elif day.day_type == DayType.vacation:
-            print("{:>2}.  {:^{width}}".format(
-                day.date.day, "V a c a t i o n", width=18))
-
-        elif day.day_type == DayType.sick_day:
-            print("{:>2}.  {:^{width}}".format(
-                day.date.day, "S i c k   d a y", width=18))
-    print("-" * width)
-    print("{:>{width}}".format(
-        _pretty_timedelta(month.calculate_flextime(), signed=True),
-        width=width))
-
-
-def _pretty_timedelta(timedelta, signed=False):
-    if signed:
-        template = "{:+2d}:{:02}"
-    else:
-        template = "{}:{:02}"
-    seconds = int(timedelta.total_seconds())
-    negative = seconds < 0
-    hours = abs(seconds) // 3600
-    minutes = abs(seconds) // 60 % 60
-    if negative:
-        hours = -hours
-    pretty_timedelta = template.format(hours, minutes)
-    return pretty_timedelta
 
 
 def get_config(config_path):
