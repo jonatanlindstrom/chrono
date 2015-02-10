@@ -5,10 +5,15 @@ import re
 from chrono import errors
 
 def write_line(file_path, string):
-    string
+    file_match = re.match("^[1-2][0-9]{3}-[0-2][0-9]\.txt",
+                          os.path.basename(file_path))
+    if not file_match:
+        raise errors.ReportError(
+            "File name is not a month file: \"{}\"".format(file_path))
+
     date_match = re.match("^(\d+)\.\s+.*$", string)
     if not date_match:
-        raise errors.BadDateError()
+        raise errors.ReportError("Bad report string: \"{}\"".format(string))
     date = date_match.group(1)
 
     if os.path.exists(file_path):
@@ -23,6 +28,6 @@ def write_line(file_path, string):
     else:
         lines.append(string)
 
-    lines = [l + "\n" for l in lines]
+    lines = "\n".join(lines)
     with open(file_path, 'w') as text_file:
-        text_file.writelines(lines)
+        text_file.write(lines)
