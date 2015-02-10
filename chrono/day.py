@@ -4,6 +4,7 @@ import datetime
 import re
 from enum import Enum
 
+from chrono.time_utilities import pretty_timedelta
 from chrono import errors
 
 
@@ -177,6 +178,20 @@ class Day(object):
                 info += "."
         combined = " ".join([text for text in (info, self.comment) if text])
         return combined
+
+    def export(self):
+        string = "{:>2}.".format(self.date.day)
+        if self.start_time:
+            string += " {}:{}".format(self.start_time.hour, self.start_time.strftime('%M'))
+        if self.lunch_duration:
+            string += " {}".format(pretty_timedelta(self.lunch_duration))
+        if self.deviation:
+            string += " {}".format(pretty_timedelta(self.deviation, signed=True))
+        if self.end_time:
+            string += " {}".format(self.end_time.strftime('%H:%M'))
+        if self.comment:
+            string += " {}".format(self.comment)
+        return string
 
     def __str__(self):
         width_label = 20

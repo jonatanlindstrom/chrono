@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """Usage: chrono [options] (today | (day | month | year) [<date>])
+       chrono [options] report (start | end) [<time>]
+       chrono [options] report (lunch | deviation) <time>
        chrono [options] flex
        chrono [options] vacation
        chrono [options] statistics ( start | lunch | end)
@@ -23,6 +25,7 @@ import configparser
 from docopt import docopt
 
 from chrono.parser import Parser
+from chrono import writer
 from chrono.time_utilities import pretty_timedelta
 from chrono import errors
 
@@ -67,6 +70,8 @@ def main():
 
                 year_files.remove(year)
             parser.parse_month_file(month_file)
+
+        # Handling CLI commands
         if arguments['today'] or arguments['day']:
             if not arguments['<date>']:
                 selected_day = parser.user.today()
@@ -134,6 +139,20 @@ def main():
                 selected_year = parser.user.years[-1]
             for month in selected_year.months:
                 print(month)
+        elif arguments['report']:
+            if arguments['start']:
+                start_time = arguments['<time>'] or datetime.datetime.now().strftime("%H:%M")
+                parser.user.add_day(parser.user.next_workday()).report_start_time(start_time)
+            elif arguments['end']:
+                end_time = arguments['<time>'] or datetime.datetime.now().strftime("%H:%M")
+                parser.user.today().report_end_time(end_time)
+            elif arguments['lunch']:
+                parser.user.today().report_lunch_duration(arguments['<time>'])
+            elif arguments["deviation"]:
+                parser.user.today().report_deviation(arguments['<time>'])
+            today = parser.user.today()
+            month_file = os.path.join(data_folder, "{}.txt".format(today.date.strftime("%Y-%m")))
+            writer.write_line(month_file, today.export())
         elif arguments['user']:
             print()
             print(parser.user)
