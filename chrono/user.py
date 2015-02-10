@@ -81,6 +81,9 @@ class User(object):
             return None
 
     def today(self):
+        """Return day in progresss ot None.
+        :rtype:  day.Day or None
+        """
         if self.current_month() is None:
             return None
         else:
