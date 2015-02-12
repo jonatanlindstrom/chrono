@@ -7,6 +7,7 @@
        chrono [options] vacation
        chrono [options] statistics ( start | lunch | end)
        chrono [options] user
+       chrono [options] edit [<month>]
        chrono -h | --help
 
 Options:
@@ -21,6 +22,7 @@ import datetime
 import locale
 import statistics as st
 import configparser
+import subprocess
 
 from docopt import docopt
 
@@ -225,6 +227,23 @@ def main():
         elif arguments['vacation']:
             print("Vacation left: {} / {}".format(
                 parser.user.vacation_left(), parser.user.payed_vacation))
+        elif arguments['edit']:
+            if 'Editor' in config['Paths']:
+                if arguments['<month>']:
+                    month_string = arguments['<month>']
+                else:
+                    month_string = parser.user.today().date.strftime("%Y-%m")
+                month_file = os.path.join(
+                    data_folder, "{}.txt".format(month_string))
+
+                if not os.path.exists(month_file):
+                    raise errors.BadDateError(
+                        "Couldn't find month file '{}'".format(month_file))
+
+                command = [config['Paths']['Editor'], month_file]
+                subprocess.call(command)
+            else:
+                print("Add an editor to your .chrono configuration file.")
 
     if reconfigured:
         write_config(config, config_path)
