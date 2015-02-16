@@ -7,6 +7,7 @@ from datetime import date
 from chrono import day
 from chrono import year
 from chrono import errors
+from chrono import week
 
 
 class User(object):
@@ -80,8 +81,23 @@ class User(object):
         else:
             return None
 
+    def current_week(self):
+        """Return the current week.
+        :rtype:  week.Week or None
+        """
+        if self.current_month() is None:
+            return None
+
+        all_days = [day for year in self.years for month in year.months for day in month.days]
+        weekdays = []
+        for day in reversed(all_days):
+            weekdays.append(day)
+            if day.date.weekday() == 0:
+                break
+        return week.Week.from_days(*weekdays)
+
     def today(self):
-        """Return day in progresss ot None.
+        """Return the last added day.
         :rtype:  day.Day or None
         """
         if self.current_month() is None:
