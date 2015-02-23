@@ -83,6 +83,35 @@ class TestParseUserFile(object):
 
         nt.assert_equal(user_1.current_month().month, 2)
 
+
+    def test_get_current_week(self):
+        user_1 = user.User(employed_date="2015-01-01")
+        nt.assert_is_none(user_1.current_week())
+        thursday = user_1.add_day(user_1.next_workday())
+        thursday.report("8:00", "1:00", "17:00")
+        friday = user_1.add_day(user_1.next_workday())
+        friday.report("8:15", "0:30", "16:45")
+
+        current_week = user_1.current_week()
+        nt.assert_is(current_week.thursday, thursday)
+        nt.assert_is(current_week.friday, friday)
+
+
+    def test_get_current_week_when_month_break(self):
+        any_user = user.User(employed_date="2015-03-01")
+        while any_user.next_workday() != "2015-04-06":
+            any_user.add_day(any_user.next_workday()).report(
+                "8:00", "1:00", "17:00")
+
+        current_week = any_user.current_week()
+        nt.assert_equal(current_week.monday.date, datetime.date(2015, 3, 30))
+        nt.assert_equal(current_week.tuesday.date, datetime.date(2015, 3, 31))
+        nt.assert_equal(current_week.wednesday.date, datetime.date(2015, 4, 1))
+        nt.assert_equal(current_week.thursday.date, datetime.date(2015, 4, 2))
+        nt.assert_equal(current_week.friday.date, datetime.date(2015, 4, 3))
+        nt.assert_equal(current_week.saturday.date, datetime.date(2015, 4, 4))
+        nt.assert_equal(current_week.sunday.date, datetime.date(2015, 4, 5))
+
     def test_today(self):
         user_1 = user.User(employed_date="2015-01-01")
         nt.assert_is_none(user_1.today())

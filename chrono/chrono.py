@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Usage: chrono [options] (today | (day | month | year) [<date>])
+"""Usage: chrono [options] (today | (day |  month | year) [<date>])
+       chrono [options] week [<week> [<year>]]
        chrono [options] report (start | end) [<time>]
        chrono [options] report (lunch | deviation) <time>
        chrono [options] flex
@@ -113,6 +114,12 @@ def main():
                         "Date string must have between 1 and 3 elements.")
 
             print(selected_day)
+        elif arguments['week']:
+            selected_week = parser.user.current_week()
+            print(selected_week)
+            print("Total flextime: {}".format(pretty_timedelta(
+                parser.user.calculate_flextime(), signed=True)))
+
         elif arguments['month']:
             if arguments['<date>']:
                 if "-" in arguments['<date>']:
@@ -130,7 +137,7 @@ def main():
             else:
                 selected_month = parser.user.years[-1].months[-1]
             print(selected_month)
-            print("\nTotal flextime: {}".format(pretty_timedelta(
+            print("Total flextime: {}".format(pretty_timedelta(
                 parser.user.calculate_flextime(), signed=True)))
 
         elif arguments['year']:
