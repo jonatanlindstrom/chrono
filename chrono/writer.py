@@ -4,6 +4,7 @@ import re
 
 from chrono import errors
 
+
 def write_line(file_path, string):
     file_match = re.match("^[1-2][0-9]{3}-[0-2][0-9]\.txt",
                           os.path.basename(file_path))

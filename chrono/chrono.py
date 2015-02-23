@@ -150,17 +150,24 @@ def main():
                 print(month)
         elif arguments['report']:
             if arguments['start']:
-                start_time = arguments['<time>'] or datetime.datetime.now().strftime("%H:%M")
-                parser.user.add_day(parser.user.next_workday()).report_start_time(start_time)
+                start_time = (arguments['<time>'] or
+                              datetime.datetime.now().strftime("%H:%M"))
+
+                parser.user.add_day(
+                    parser.user.next_workday()).report_start_time(start_time)
+
             elif arguments['end']:
-                end_time = arguments['<time>'] or datetime.datetime.now().strftime("%H:%M")
+                end_time = (arguments['<time>'] or
+                            datetime.datetime.now().strftime("%H:%M"))
                 parser.user.today().report_end_time(end_time)
             elif arguments['lunch']:
                 parser.user.today().report_lunch_duration(arguments['<time>'])
             elif arguments["deviation"]:
                 parser.user.today().report_deviation(arguments['<time>'])
             today = parser.user.today()
-            month_file = os.path.join(data_folder, "{}.txt".format(today.date.strftime("%Y-%m")))
+            month_file = os.path.join(
+                data_folder, "{}.txt".format(today.date.strftime("%Y-%m")))
+
             writer.write_line(month_file, today.export())
         elif arguments['user']:
             print()

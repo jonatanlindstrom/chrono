@@ -9,7 +9,7 @@ setup(name='chrono',
                   "readable text files.",
       author='Jonatan Lindström',
       author_email='jonatanlindstromd@gmail.com',
-      install_requires=["docopt", "nose"],
+      install_requires=["docopt", "nose", 'isoweek'],
       packages=["chrono"],
       entry_points={
               "console_scripts": ["chrono = chrono.chrono:main"]

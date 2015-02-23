@@ -8,6 +8,7 @@ from chrono import day
 from chrono import errors
 from chrono.time_utilities import pretty_timedelta
 
+
 class Week:
     def __init__(self, year, week_number):
         self._week = isoweek.Week(year, week_number)
@@ -62,33 +63,24 @@ class Week:
 
     def calculate_flextime(self):
         flextime = datetime.timedelta()
-        for weekday in (self.monday, self.tuesday, self.wednesday, self.thursday, self.friday, self.saturday, self.sunday):
+        for weekday in (self.monday, self.tuesday, self.wednesday,
+                        self.thursday, self.friday, self.saturday,
+                        self.sunday):
             flextime += weekday.calculate_flextime()
         return flextime
 
     def __str__(self):
-        width = 41
-        week_string = "{}: {} - {}".format(self.number, self.monday.date.isoformat(), self.sunday.date.isoformat())
+        width = 40
+        week_string = "{}: {} - {}".format(
+            self.number,
+            self.monday.date.isoformat(),
+            self.sunday.date.isoformat())
         string = "\n{:^{width}}".format(week_string, width=width)
-        string += "\n{}".format("-" * width)
-        for weekday in (self.monday, self.tuesday, self.wednesday, self.thursday, self.friday, self.saturday, self.sunday):
-            string += "\n{:<4}{:>2}.".format(weekday.date.strftime("%a"),
-                                             weekday.date.day)
+        string += "\n{}\n".format("-" * width)
+        string += "\n".join(weekday.list_str() for weekday in (
+            self.monday, self.tuesday, self.wednesday, self.thursday,
+            self.friday, self.saturday, self.sunday))
 
-            if weekday.day_type == day.DayType.working_day:
-                string += "{:>7}{:>6}{:>7}{:>7}{:>7}  {}".format(
-                    weekday.start_time.strftime('%H:%M') if weekday.start_time else "",
-                    pretty_timedelta(weekday.lunch_duration),
-                    weekday.end_time.strftime('%H:%M') if weekday.end_time else "",
-                    pretty_timedelta(
-                        weekday.deviation, signed=True) if weekday.deviation else "",
-                    pretty_timedelta(weekday.calculate_flextime(), signed=True),
-                    weekday.comment or "")
-            elif weekday.day_type == day.DayType.vacation:
-                string += "{:^{width}}".format("V a c a t i o n", width=18)
-
-            elif weekday.day_type == day.DayType.sick_day:
-                string += "{:^{width}}".format(weekday.date.day, "S i c k   d a y", width=18)
         string += "\n{}".format("-" * width)
         string += "\n{:>{width}}\n".format(
             pretty_timedelta(self.calculate_flextime(), signed=True),
