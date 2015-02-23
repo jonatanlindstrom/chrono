@@ -77,7 +77,7 @@ class Week:
 
             if weekday.day_type == day.DayType.working_day:
                 string += "{:>7}{:>6}{:>7}{:>7}{:>7}  {}".format(
-                    weekday.start_time.strftime('%H:%M'),
+                    weekday.start_time.strftime('%H:%M') if weekday.start_time else "",
                     pretty_timedelta(weekday.lunch_duration),
                     weekday.end_time.strftime('%H:%M') if weekday.end_time else "",
                     pretty_timedelta(
