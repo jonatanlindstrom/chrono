@@ -182,16 +182,43 @@ class Day(object):
     def export(self):
         string = "{:>2}.".format(self.date.day)
         if self.start_time:
-            string += " {}:{}".format(self.start_time.hour, self.start_time.strftime('%M'))
+            string += " {}:{}".format(
+                self.start_time.hour, self.start_time.strftime('%M'))
+
         if self.lunch_duration:
             string += " {}".format(pretty_timedelta(self.lunch_duration))
         if self.deviation:
-            string += " {}".format(pretty_timedelta(self.deviation, signed=True))
+            string += " {}".format(
+                pretty_timedelta(self.deviation, signed=True))
+
         if self.end_time:
             string += " {}".format(self.end_time.strftime('%H:%M'))
         if self.comment:
             string += " {}".format(self.comment)
         return string
+
+    def list_str(self):
+        string = "{:<4}{:>2}.".format(self.date.strftime("%a"),
+                                      self.date.day)
+        if self.day_type == DayType.working_day:
+            string += "{:>7}{:>6}{:>7}{:>6}{:>7}  {}".format(
+                self.start_time.strftime("%H:%M") if self.start_time else "",
+                pretty_timedelta(self.lunch_duration),
+                self.end_time.strftime("%H:%M") if self.end_time else "",
+                pretty_timedelta(self.deviation) if self.deviation else "",
+                pretty_timedelta(self.calculate_flextime(), signed=True)
+                if self.end_time else "",
+                self.get_info())
+        elif self.day_type == DayType.weekend:
+            string += "                  {}".format(self.get_info())
+        elif self.day_type == DayType.vacation:
+            string += "  Vacation        {}".format(self.get_info())
+        elif self.day_type == DayType.holiday:
+            string += "                  {}".format(self.get_info())
+        elif self.day_type == DayType.sick_day:
+            string += "  Sickday         {}".format(self.get_info())
+
+        return string.strip()
 
     def __str__(self):
         width_label = 20

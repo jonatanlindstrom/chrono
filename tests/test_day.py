@@ -360,3 +360,67 @@ The answer is blowing in the wind"""
         nt.assert_equal(day_2.comment,
                         "The answer my friend, is blowing in the wind. "
                         "The answer is blowing in the wind.")
+
+    def test_workday_list_string(self):
+        any_workday = day.Day("2015-02-23")
+        nt.assert_equal(any_workday.list_str(), "Mon 23.")
+        any_workday.report_start_time("8:00")
+        nt.assert_equal(any_workday.list_str(), "Mon 23.  08:00")
+        any_workday.report_lunch_duration("1:00")
+        nt.assert_equal(any_workday.list_str(), "Mon 23.  08:00  1:00")
+        any_workday.report_end_time("17:00")
+        nt.assert_equal(any_workday.list_str(),
+                        "Mon 23.  08:00  1:00  17:00         0:00")
+
+        any_workday.report_deviation("0:30")
+        nt.assert_equal(any_workday.list_str(),
+                        "Mon 23.  08:00  1:00  17:00  0:30  -0:30")
+
+        any_workday.comment = "Any day."
+        nt.assert_equal(any_workday.list_str(),
+                        "Mon 23.  08:00  1:00  17:00  0:30  -0:30  Any day.")
+
+    def test_workday_list_string_with_negative_flextime(self):
+        negative_flex_day = day.Day("2015-02-23")
+        negative_flex_day.report("8:00", "1:00", "16:55")
+        nt.assert_equal(negative_flex_day.list_str(),
+                        "Mon 23.  08:00  1:00  16:55        -0:05")
+
+    def test_workday_list_string_with_positive_flextime(self):
+        negative_flex_day = day.Day("2015-02-23")
+        negative_flex_day.report("8:00", "1:00", "18:10")
+        nt.assert_equal(negative_flex_day.list_str(),
+                        "Mon 23.  08:00  1:00  18:10        +1:10")
+
+    def test_weekend_list_string(self):
+        any_weekend = day.Day("2015-02-22")
+        nt.assert_equal(any_weekend.list_str(), "Sun 22.")
+        any_weekend.comment = "Sunday sundae."
+        nt.assert_equal(any_weekend.list_str(),
+                        "Sun 22.                  Sunday sundae.")
+
+    def test_vacation_list_string(self):
+        any_vacation_day = day.Day("2015-02-23")
+        any_vacation_day.set_type(day.DayType.vacation)
+        nt.assert_equal(any_vacation_day.list_str(), "Mon 23.  Vacation")
+        any_vacation_day.comment = "Leaving on a jet plane."
+        nt.assert_equal(any_vacation_day.list_str(),
+                        "Mon 23.  Vacation        Leaving on a jet plane.")
+
+    def test_holiday_list_string(self):
+        any_holiday = day.Day("2014-12-31")
+        any_holiday.set_type(day.DayType.holiday)
+        any_holiday.info = "New Years Eve"
+        nt.assert_equal(any_holiday.list_str(),
+                        "Wed 31.                  New Years Eve")
+        any_holiday.comment = "Party."
+        nt.assert_equal(any_holiday.list_str(),
+                        "Wed 31.                  New Years Eve. Party.")
+
+    def test_sick_day_list_string(self):
+        any_sick_day = day.Day("2015-02-23")
+        any_sick_day.set_type(day.DayType.sick_day)
+        nt.assert_equal(any_sick_day.list_str(), "Mon 23.  Sickday")
+        any_sick_day.comment = "Poor me."
+        nt.assert_equal(any_sick_day.list_str(),
+                        "Mon 23.  Sickday         Poor me.")

@@ -83,7 +83,6 @@ class TestParseUserFile(object):
 
         nt.assert_equal(user_1.current_month().month, 2)
 
-
     def test_get_current_week(self):
         user_1 = user.User(employed_date="2015-01-01")
         nt.assert_is_none(user_1.current_week())
@@ -95,7 +94,6 @@ class TestParseUserFile(object):
         current_week = user_1.current_week()
         nt.assert_is(current_week.thursday, thursday)
         nt.assert_is(current_week.friday, friday)
-
 
     def test_get_current_week_when_month_break(self):
         any_user = user.User(employed_date="2015-03-01")

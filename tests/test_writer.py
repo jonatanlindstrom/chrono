@@ -8,6 +8,7 @@ import nose.tools as nt
 from chrono.writer import write_line
 from chrono import errors
 
+
 class TestWriter:
     def setup(self):
         self.tempdir = tempfile.TemporaryDirectory()

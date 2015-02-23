@@ -88,7 +88,9 @@ class User(object):
         if self.current_month() is None:
             return None
 
-        all_days = [day for year in self.years for month in year.months for day in month.days]
+        all_days = [day for year in self.years
+                    for month in year.months
+                    for day in month.days]
         weekdays = []
         for day in reversed(all_days):
             weekdays.append(day)
