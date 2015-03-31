@@ -7,6 +7,7 @@
        chrono [options] flex
        chrono [options] vacation
        chrono [options] statistics ( start | lunch | end)
+       chrono [options] histogram ( start | end )
        chrono [options] user
        chrono [options] edit [<month>]
        chrono -h | --help
@@ -238,6 +239,28 @@ def main():
                 print("-" * 17)
                 print("{} values".format(len(evenings)))
                 print()
+        elif arguments['histogram']:
+            if arguments['start']:
+                values = [
+                        datetime.timedelta(
+                            hours=d.start_time.hour,
+                            minutes=d.start_time.minute).total_seconds() // 60
+                        for d in parser.user.all_days()
+                        if d.start_time is not None]
+                print("Start time")
+            elif arguments['end']:
+                values = [
+                        datetime.timedelta(
+                            hours=d.end_time.hour,
+                            minutes=d.end_time.minute).total_seconds() // 60
+                        for d in parser.user.all_days()
+                        if d.start_time is not None]
+                print("End time")
+            print()
+            print_histogram(values)
+            print()
+
+
         elif arguments['vacation']:
             print("Vacation left: {} / {}".format(
                 parser.user.vacation_left(), parser.user.payed_vacation))
@@ -262,6 +285,24 @@ def main():
     if reconfigured:
         write_config(config, config_path)
 
+def print_histogram(values, start_time=7, end_time=20, bin_width=5, height=20):
+    number_of_bins = int((end_time * 60 - start_time * 60) / bin_width)
+    bins = []
+    for i in range(number_of_bins):
+        low = start_time * 60 + i * bin_width
+        high = start_time * 60 + i * bin_width + bin_width
+        bins.append(len([t for t in values if t >= low and t < high]))
+
+    for n in range(height, 0, -1):
+        for bin in bins:
+            character = "0" if bin / max(bins) * height >= n else " "
+            print("{}".format(character), end="")
+        print()
+    print("-" * number_of_bins)
+    for n in range(start_time, end_time + 1):
+        width = int(number_of_bins / (end_time - start_time))
+        print("{:<{width}}".format(n, width=width), end="")
+    print()
 
 def get_config(config_path):
     config = configparser.ConfigParser()
