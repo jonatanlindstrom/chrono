@@ -7,12 +7,14 @@
        chrono [options] flex
        chrono [options] vacation
        chrono [options] statistics ( start | lunch | end)
-       chrono [options] histogram ( start | end )
+       chrono [options] [--height=<height>][--bin-width=<width>] histogram ( start | end )
        chrono [options] user
        chrono [options] edit [<month>]
        chrono -h | --help
 
 Options:
+--height=<height>             Height of histogram. [default: 20]
+--bin-width=<width>           Width in minutes of each bin. [default: 5]
 --set-data-folder=<folder>
 -v, --verbose
 """
@@ -257,7 +259,12 @@ def main():
                         if d.start_time is not None]
                 print("End time")
             print()
-            print_histogram(values)
+
+            print_histogram(
+                values,
+                bin_width=int(arguments['--bin-width']),
+                height=int(arguments['--height']))
+
             print()
 
 
