@@ -8,6 +8,8 @@ from chrono.time_utilities import pretty_timedelta
 from chrono import errors
 
 
+STANDARD_HOURS = 8
+
 class DayType(Enum):
     working_day = 1
     weekend = 2
@@ -120,9 +122,8 @@ class Day(object):
         return complete_status
 
     def expected_hours(self):
-        standard_day = 8
         if self.day_type == DayType.working_day:
-            expected_hours = datetime.timedelta(hours=standard_day)
+            expected_hours = datetime.timedelta(hours=STANDARD_HOURS)
         else:
             expected_hours = datetime.timedelta(hours=0)
         return expected_hours
