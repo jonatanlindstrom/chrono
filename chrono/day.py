@@ -264,9 +264,7 @@ class Day(object):
                 worked_hours = self.worked_hours(
                     end_time=datetime.datetime.now())
 
-            value = "{:}:{:02}".format(
-                int(worked_hours.total_seconds() // 3600),
-                int(worked_hours.total_seconds() % 3600 // 60))
+            value = pretty_timedelta(worked_hours)
 
             string += "{:>{width}}".format(value, width=width_value)
             if not self.complete():
