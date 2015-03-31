@@ -236,18 +236,12 @@ class Day(object):
 
             string += "\n{:<{width}}".format("Lunch:", width=width_label)
             if self.lunch_duration:
-                value = "{:}:{:02}".format(
-                    int(self.lunch_duration.total_seconds() // 3600),
-                    int(self.lunch_duration.total_seconds() % 3600 // 60))
-
+                value = pretty_timedelta(self.lunch_duration)
                 string += "{:>{width}}".format(value, width=width_value)
 
             string += "\n{:<{width}}".format("Deviation:", width=width_label)
             if self.deviation > datetime.timedelta():
-                value = "{:}:{:02}".format(
-                    int(self.lunch_duration.total_seconds() // 3600),
-                    int(self.lunch_duration.total_seconds() % 3600 // 60))
-
+                value = pretty_timedelta(self.deviation)
                 string += "{:>{width}}".format(value, width=width_value)
 
             string += "\n{:<{width}}".format("End time:", width=width_label)
