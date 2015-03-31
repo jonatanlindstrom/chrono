@@ -126,6 +126,14 @@ class TestWriter:
             file_path,
             "4. 8:00")
 
+    def test_write_single_digit_date_with_alignment_should_not_raise(self):
+        file_path = self._create_month_file("2015-02.txt", "")
+        write_line(file_path, " 2. 8:00")
+        with open(file_path, 'r') as month_file:
+            nt.assert_equal(
+                month_file.read(),
+                "2. 8:00")
+
     def _create_month_file(self, file_name, content):
         file_path = os.path.join(self.tempdir.name, file_name)
         with open(file_path, 'w') as month_file:
