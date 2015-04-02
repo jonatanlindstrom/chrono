@@ -302,7 +302,7 @@ def print_histogram(values, start_time=7, end_time=20, bin_width=5, height=20):
 
     for n in range(height, 0, -1):
         for bin in bins:
-            character = "0" if bin / max(bins) * height >= n else " "
+            character = "|" if bin / max(bins) * height >= n else " "
             print("{}".format(character), end="")
         print()
     print("-" * number_of_bins)
