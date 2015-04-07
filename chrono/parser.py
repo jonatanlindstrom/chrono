@@ -16,7 +16,7 @@ class Parser(object):
 
     def parse_month_file(self, file_name):
         month, _ = os.path.splitext(os.path.basename(file_name))
-        with open(file_name, "r") as month_file:
+        with open(file_name, "r", encoding='utf-8') as month_file:
             string = month_file.read()
         parsed_month = self.parse_month_string(string, month)
         return parsed_month
@@ -153,7 +153,7 @@ class Parser(object):
                 parsed_year = Year(year)
         else:
             parsed_year = Year(year)
-        with open(file_name, "r") as year_file:
+        with open(file_name, "r", encoding='utf-8') as year_file:
             year_string = year_file.read()
 
         holiday_pattern = re.compile(
@@ -172,8 +172,7 @@ class Parser(object):
         return parsed_year
 
     def parse_user_file(self, file_name):
-        
-        with open(file_name, "r") as user_file:
+        with open(file_name, "r", encoding='utf-8') as user_file:
             user_string = user_file.read()
         name_pattern = re.compile(
             "^\s*[Nn]ame\s*:\s*(\w+\s\w+)\s*$", flags=re.MULTILINE)
