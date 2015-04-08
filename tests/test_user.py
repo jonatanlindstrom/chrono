@@ -258,3 +258,41 @@ class TestParseUserFile(object):
         nt.assert_equal(user_1.vacation_left(), 30)
         nt.assert_equal(user_1.vacation_left(date_string="2015-04-01"), 37)
         nt.assert_equal(user_1.vacation_left(date_string="2016-04-01"), 67)
+
+    def test_current_week_when_monday_is_holiday(self):
+        any_user = user.User(employed_date="2015-03-01")
+        any_user.add_day(
+            any_user.next_workday()).report("8:00", "1:00", "17:00")
+        any_user.add_holiday("2015-03-09", "Unit test day")
+        while any_user.next_workday() != "2015-03-16":
+            any_user.add_day(
+                any_user.next_workday()).report("8:00", "1:00", "17:00")
+
+        week_without_monday = any_user.current_week()
+
+        nt.assert_is(
+            week_without_monday.monday.day_type, day.DayType.holiday)
+
+        nt.assert_is(
+            week_without_monday.tuesday.day_type, day.DayType.working_day)
+
+        nt.assert_is(
+            week_without_monday.wednesday.day_type, day.DayType.working_day)
+
+        nt.assert_is(
+            week_without_monday.thursday.day_type, day.DayType.working_day)
+
+        nt.assert_is(
+            week_without_monday.friday.day_type, day.DayType.working_day)
+
+    def test_add_holiday_should_add_in_year_and_month(self):
+        any_user = user.User(employed_date="2015-03-01")
+        nt.assert_equal(any_user.holidays, {})
+        any_user.add_holiday("2015-03-03", "Hinamatsuri")
+        nt.assert_equal(any_user.holidays, {"2015-03-03": "Hinamatsuri"})
+        nt.assert_equal(any_user.current_year().holidays["2015-03"],
+                        {"2015-03-03": "Hinamatsuri"})
+
+        any_user.add_day(any_user.next_workday())
+        nt.assert_equal(any_user.current_month().holidays,
+                        {"2015-03-03": "Hinamatsuri"})

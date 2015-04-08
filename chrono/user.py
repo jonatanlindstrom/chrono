@@ -4,7 +4,8 @@ from datetime import datetime
 from datetime import timedelta
 from datetime import date
 
-from chrono import day
+from chrono.day import Day, DayType
+from chrono import month
 from chrono import year
 from chrono import errors
 from chrono import week
@@ -34,7 +35,7 @@ class User(object):
     def add_day(self, date_string):
         """Add a day.
         :type date_string string:  The new date
-        :rtype: day.Day
+        :rtype: Day
         """
         if self.next_workday()[:4] == self.next_year():
             new_year = year.Year(self.next_year())
@@ -63,7 +64,17 @@ class User(object):
             year_object.start_date = self.employed_date
             self.years.append(year_object)
 
+    def add_holiday(self, date_string, name):
+        date = datetime.strptime(date_string, "%Y-%m-%d").date()
+        self.holidays[date_string] = name
+        for year in self.years:
+            if date.year == year.year:
+                year.add_holiday(date_string, name)
+
     def next_workday(self):
+        """Return next workday.
+        :rtype: Day
+        """
         return self.current_year().next_workday()
 
     def next_month(self):
@@ -76,6 +87,9 @@ class User(object):
         return self.years[-1]
 
     def current_month(self):
+        """Return the current month.
+        :rtype:  month.Month or None
+        """
         if len(self.current_year().months) > 0:
             return self.current_year().months[-1]
         else:
@@ -92,11 +106,21 @@ class User(object):
                     for month in year.months
                     for day in month.days]
         weekdays = []
+        earliest_weekday = 6
         for day in reversed(all_days):
-            weekdays.append(day)
-            if day.date.weekday() == 0:
+            if day.date.weekday() < earliest_weekday:
+                earliest_weekday = day.date.weekday()
+                weekdays.append(day)
+            else:
                 break
-        return week.Week.from_days(*weekdays)
+        tmp_week = week.Week.from_days(*weekdays)
+
+        for weekday in (tmp_week.monday, tmp_week.tuesday, tmp_week.wednesday,
+                        tmp_week.thursday, tmp_week.friday):
+            if weekday.date.isoformat() in self.holidays:
+                weekday.day_type = DayType.holiday
+        return tmp_week
+
 
     def today(self):
         """Return the last added day.
