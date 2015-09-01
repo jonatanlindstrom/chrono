@@ -292,7 +292,7 @@ def main():
     if reconfigured:
         write_config(config, config_path)
 
-def print_histogram(values, start_time=7, end_time=20, bin_width=5, height=20):
+def print_histogram(values, start_time=7, end_time=20, bin_width=5, height=20, staple_character="|"):
     number_of_bins = int((end_time * 60 - start_time * 60) / bin_width)
     bins = []
     for i in range(number_of_bins):
@@ -302,7 +302,7 @@ def print_histogram(values, start_time=7, end_time=20, bin_width=5, height=20):
 
     for n in range(height, 0, -1):
         for bin in bins:
-            character = "|" if bin / max(bins) * height >= n else " "
+            character = staple_character if bin / max(bins) * height >= n else " "
             print("{}".format(character), end="")
         print()
     print("-" * number_of_bins)
