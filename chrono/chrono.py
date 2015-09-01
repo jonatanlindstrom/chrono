@@ -185,28 +185,32 @@ def main():
                     for d in parser.user.all_days()
                     if d.start_time is not None]
                 print("\nStart time")
-                print("-" * 17)
-                print("{:<12}{}".format(
+                print("-" * 25)
+                print("{:<20}{}".format(
                     "Mean:", time.strftime(
                         '%H:%M', time.gmtime(st.mean(mornings)))))
 
-                print("{:<12}{}".format(
+                print("{:<20}{}".format(
                     "Median:", time.strftime(
                         '%H:%M', time.gmtime(st.median(mornings)))))
 
-                print("{:<12}{}".format(
+                print("{:<20}{}".format(
+                    "Standard deviation:", time.strftime(
+                        '%H:%M', time.gmtime(st.pstdev(mornings)))))
+
+                print("{:<20}{}".format(
                     "Mode:", time.strftime(
                         '%H:%M', time.gmtime(st.mode(mornings)))))
 
-                print("{:<12}{}".format(
+                print("{:<20}{}".format(
                     "Earliest:", time.strftime(
                         '%H:%M', time.gmtime(min(mornings)))))
 
-                print("{:<12}{}".format(
+                print("{:<20}{}".format(
                     "Latest:", time.strftime(
                         '%H:%M', time.gmtime(max(mornings)))))
 
-                print("-" * 17)
+                print("-" * 25)
                 print("{} values".format(len(mornings)))
                 print()
             if arguments['end']:
@@ -217,28 +221,32 @@ def main():
                     for d in parser.user.all_days()
                     if d.end_time is not None]
                 print("\nEnd time")
-                print("-" * 17)
-                print("{:<12}{}".format(
+                print("-" * 25)
+                print("{:<20}{}".format(
                     "Mean:", time.strftime(
                         '%H:%M', time.gmtime(st.mean(evenings)))))
 
-                print("{:<12}{}".format(
+                print("{:<20}{}".format(
                     "Median:", time.strftime(
                         '%H:%M', time.gmtime(st.median(evenings)))))
 
-                print("{:<12}{}".format(
+                print("{:<20}{}".format(
+                    "Standard deviation:", time.strftime(
+                        '%H:%M', time.gmtime(st.pstdev(evenings)))))
+
+                print("{:<20}{}".format(
                     "Mode:", time.strftime(
                         '%H:%M', time.gmtime(st.mode(evenings)))))
 
-                print("{:<12}{}".format(
+                print("{:<20}{}".format(
                     "Earliest:", time.strftime(
                         '%H:%M', time.gmtime(min(evenings)))))
 
-                print("{:<12}{}".format(
+                print("{:<20}{}".format(
                     "Latest:", time.strftime(
                         '%H:%M', time.gmtime(max(evenings)))))
 
-                print("-" * 17)
+                print("-" * 25)
                 print("{} values".format(len(evenings)))
                 print()
         elif arguments['histogram']:
