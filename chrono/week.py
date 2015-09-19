@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import datetime
+from datetime import timedelta 
 
 import isoweek
 
@@ -10,7 +10,7 @@ from chrono.time_utilities import pretty_timedelta
 
 
 class Week:
-    def __init__(self, year, week_number):
+    def __init__(self, year: int, week_number: int):
         self._week = isoweek.Week(year, week_number)
         self.number = week_number
         self.year = year
@@ -61,8 +61,8 @@ class Week:
                 tmp_week.sunday = tmp_day
         return tmp_week
 
-    def calculate_flextime(self):
-        flextime = datetime.timedelta()
+    def calculate_flextime(self) -> timedelta:
+        flextime = timedelta()
         for weekday in (self.monday, self.tuesday, self.wednesday,
                         self.thursday, self.friday, self.saturday,
                         self.sunday):
