@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 
-import datetime
+from datetime import datetime, timedelta
 import re
+from typing import Optional
 
 from chrono import month
 from chrono import day
@@ -9,7 +10,8 @@ from chrono import errors
 
 
 class Year(object):
-    def __init__(self, year_string, flextime=None, start_date=None):
+    def __init__(self, year_string: str, flextime: Optional[timedelta] = None,
+                 start_date: Optional[str] = None):
         if not isinstance(year_string, str):
             raise errors.BadDateError(
                 "Argument year_string must be a string, was \"{}\".".format(
@@ -22,7 +24,7 @@ class Year(object):
                 "\"{}\".".format(year_string))
 
         if flextime is not None and not isinstance(flextime,
-                                                   datetime.timedelta):
+                                                   timedelta):
             raise errors.BadDateError(
                 "Argument flextime must be a timedelta object, was \"{}\"."
                 .format(type(flextime).__name__))
@@ -39,7 +41,7 @@ class Year(object):
 
         self.year = int(year_string)
         self.months = []
-        self.flextime = flextime or datetime.timedelta()
+        self.flextime = flextime or timedelta()
         self.force_start_date = start_date
         self.holidays = {"{}-{:02d}".format(self.year, m): {}
                          for m in range(1, 13)}
@@ -48,7 +50,7 @@ class Year(object):
         return (not self.next_workday().startswith("{}-".format(self.year)) and
                 self.months[-1].complete())
 
-    def next_workday(self):
+    def next_workday(self) -> str:
         if len(self.months) == 0:
             if self.force_start_date is None:
                 tmp_month_string = "{}-01".format(self.year)
@@ -63,7 +65,7 @@ class Year(object):
             next_workday = self.months[-1].next_workday()
         return next_workday
 
-    def next_month(self):
+    def next_month(self) -> str:
         if len(self.months) == 0:
             if self.force_start_date is None:
                 next_month = "{}-01".format(self.year)
@@ -73,28 +75,28 @@ class Year(object):
             next_month = self.months[-1].next_month()
         return next_month
 
-    def next_year(self):
+    def next_year(self) -> str:
         return str(self.year + 1)
 
-    def calculate_flextime(self):
+    def calculate_flextime(self) -> timedelta:
         flextime = self.flextime
         for month in self.months:
             flextime += month.calculate_flextime()
         return flextime
 
-    def sick_days(self):
+    def sick_days(self) -> int:
         sick_days = 0
         for month in self.months:
             sick_days += month.sick_days()
         return sick_days
 
-    def used_vacation(self, date_string=None):
+    def used_vacation(self, date_string: Optional[str] = None) -> int:
         used_vacation = 0
         for month in self.months:
             used_vacation += month.used_vacation(date_string=date_string)
         return used_vacation
 
-    def add_day(self, date_string):
+    def add_day(self, date_string: str) -> day.Day:
         new_day = day.Day(date_string)
         if new_day.date.year != self.year:
             raise errors.ReportError(
@@ -109,8 +111,8 @@ class Year(object):
         day_1 = self.months[-1].add_day(date_string)
         return day_1
 
-    def add_holiday(self, date_string, name):
-        date = datetime.datetime.strptime(date_string, "%Y-%m-%d").date()
+    def add_holiday(self, date_string: str, name: str):
+        date = datetime.strptime(date_string, "%Y-%m-%d").date()
         self.holidays[date_string[:7]][date_string] = name
         for month in self.months:
             if date.month == month.month:

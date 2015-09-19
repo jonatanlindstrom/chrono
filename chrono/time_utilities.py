@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 
+from datetime import timedelta
 
-def pretty_timedelta(timedelta, signed=False):
+def pretty_timedelta(timedelta: timedelta, signed: bool = False) -> str:
     """
     :param timedelta:
     :param bool signed:

@@ -292,7 +292,9 @@ def main():
     if reconfigured:
         write_config(config, config_path)
 
-def print_histogram(values, start_time=7, end_time=20, bin_width=5, height=20, staple_character="|"):
+def print_histogram(values, start_time: int = 7, end_time: int = 20,
+                    bin_width:int = 5, height: int = 20,
+                    staple_character: str = "|"):
     number_of_bins = int((end_time * 60 - start_time * 60) / bin_width)
     bins = []
     for i in range(number_of_bins):
@@ -311,7 +313,7 @@ def print_histogram(values, start_time=7, end_time=20, bin_width=5, height=20, s
         print("{:<{width}}".format(n, width=width), end="")
     print()
 
-def get_config(config_path):
+def get_config(config_path: str) -> configparser.ConfigParser:
     config = configparser.ConfigParser()
     config.read(config_path)
     if not config.has_section('Paths'):
@@ -319,7 +321,7 @@ def get_config(config_path):
     return config
 
 
-def write_config(config, config_path):
+def write_config(config, config_path: str):
     with open(config_path, 'w') as config_file:
         config.write(config_file)
 

@@ -14,14 +14,14 @@ from chrono.errors import ParseError
 class Parser(object):
     user = None
 
-    def parse_month_file(self, file_name):
+    def parse_month_file(self, file_name: str) -> Month:
         month, _ = os.path.splitext(os.path.basename(file_name))
         with open(file_name, "r", encoding='utf-8') as month_file:
             string = month_file.read()
         parsed_month = self.parse_month_string(string, month)
         return parsed_month
 
-    def parse_month_string(self, string, month):
+    def parse_month_string(self, string: str, month: str) -> Month:
         parsed_month = Month(month)
         empty_pattern = re.compile("^\s*$")
         date_pattern = re.compile("^(\d{1,2})\.$")
@@ -124,7 +124,7 @@ class Parser(object):
         else:
             return self.user.years[-1].months[-1]
 
-    def parse_archive_file(self, file_name):
+    def parse_archive_file(self, file_name: str) -> Archive:
         parsed_archive = Archive()
         with open(file_name, "r") as month_file:
             archive_string = month_file.read()
@@ -140,7 +140,7 @@ class Parser(object):
             parsed_archive.archive_month(parsed_month)
         return parsed_archive
 
-    def parse_year_file(self, file_name):
+    def parse_year_file(self, file_name: str) -> Year:
         year = os.path.splitext(os.path.basename(file_name))[0]
         if self.user is not None:
             if self.user.employed_date.year == int(year):
@@ -171,7 +171,7 @@ class Parser(object):
             self.user.add_year(parsed_year)
         return parsed_year
 
-    def parse_user_file(self, file_name):
+    def parse_user_file(self, file_name: str) -> User:
         with open(file_name, "r", encoding='utf-8') as user_file:
             user_string = user_file.read()
         name_pattern = re.compile(
