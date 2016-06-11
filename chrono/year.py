@@ -50,6 +50,10 @@ class Year(object):
         return (not self.next_workday().startswith("{}-".format(self.year)) and
                 self.months[-1].complete())
 
+    @property
+    def days(self):
+        return [day for month in self.months for day in month.days]
+
     def next_workday(self) -> str:
         if len(self.months) == 0:
             if self.force_start_date is None:
