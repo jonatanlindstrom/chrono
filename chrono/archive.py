@@ -1,27 +1,27 @@
 # -*- coding: utf-8 -*-
 
-import datetime
+from datetime import timedelta
 
-from chrono import errors
+from chrono import errors, month
 
 
 class Archive(object):
     def __init__(self):
         self.months = []
 
-    def calculate_flextime(self):
-        flextime = datetime.timedelta()
+    def calculate_flextime(self) -> timedelta:
+        flextime = timedelta()
         for month in self.months:
             flextime += month.calculate_flextime()
         return flextime
 
-    def used_vacation(self):
+    def used_vacation(self) -> int:
         used_vacation = 0
         for month in self.months:
             used_vacation += month.used_vacation()
         return used_vacation
 
-    def archive_month(self, month):
+    def archive_month(self, month: month.Month):
         for old_month in self.months:
             if old_month.year == month.year and old_month.month == month.month:
                 raise errors.ReportError("Month {}-{} is allready archived."
@@ -39,7 +39,7 @@ class Archive(object):
                                      "can't be archived.")
         self.months.append(month)
 
-    def next_month(self):
+    def next_month(self) -> month.Month:
         if len(self.months) > 0:
             month = self.months[-1].month + 1
             year = self.months[-1].year

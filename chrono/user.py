@@ -3,6 +3,7 @@
 from datetime import datetime
 from datetime import timedelta
 from datetime import date
+from typing import Optional, List
 
 from chrono.day import Day, DayType
 from chrono import month
@@ -12,8 +13,12 @@ from chrono import week
 
 
 class User(object):
-    def __init__(self, name="", employed_date=None, employment=100,
-                 payed_vacation=0, vacation_month=1, extra_vacation=0):
+    def __init__(self, name: str = "",
+                 employed_date: Optional[str] = None,
+                 employment: int = 100,
+                 payed_vacation: int = 0,
+                 vacation_month: int = 1,
+                 extra_vacation: int = 0):
         self.name = name
         self.years = []
         if employed_date is not None:
@@ -32,7 +37,7 @@ class User(object):
         self.extra_vacation = extra_vacation
         self.holidays = {}
 
-    def add_day(self, date_string):
+    def add_day(self, date_string: str) -> Day:
         """Add a day.
         :type date_string string:  The new date
         :rtype: Day
@@ -45,7 +50,7 @@ class User(object):
         new_day = self.current_year().add_day(date_string)
         return new_day
 
-    def add_year(self, year_object):
+    def add_year(self, year_object: year.Year):
         if len(year_object.months) != 0:
             raise errors.YearError(
                 "Added year can't contain any reported days.")
@@ -64,38 +69,37 @@ class User(object):
             year_object.start_date = self.employed_date
             self.years.append(year_object)
 
-    def add_holiday(self, date_string, name):
+    def add_holiday(self, date_string: str, name: str):
         date = datetime.strptime(date_string, "%Y-%m-%d").date()
         self.holidays[date_string] = name
         for year in self.years:
             if date.year == year.year:
                 year.add_holiday(date_string, name)
 
-    def next_workday(self):
+    def next_workday(self) -> str:
         """Return next workday.
         :rtype: Day
         """
         return self.current_year().next_workday()
 
-    def next_month(self):
+    def next_month(self) -> str:
         return self.current_year().next_month()
 
-    def next_year(self):
+    def next_year(self) -> str:
         return self.current_year().next_year()
 
-    def current_year(self):
+    def current_year(self) -> year.Year:
         return self.years[-1]
 
-    def current_month(self):
+    def current_month(self) -> Optional[month.Month]:
         """Return the current month.
-        :rtype:  month.Month or None
         """
         if len(self.current_year().months) > 0:
             return self.current_year().months[-1]
         else:
             return None
 
-    def current_week(self):
+    def current_week(self) -> week.Week:
         """Return the current week.
         :rtype:  week.Week or None
         """
@@ -122,26 +126,25 @@ class User(object):
         return tmp_week
 
 
-    def today(self):
+    def today(self) -> Day:
         """Return the last added day.
-        :rtype:  day.Day or None
         """
         if self.current_month() is None:
             return None
         else:
             return self.current_month().days[-1]
 
-    def calculate_flextime(self):
+    def calculate_flextime(self) -> timedelta:
         flextime = self.flextime
         for year in self.years:
             flextime += year.calculate_flextime()
         return flextime
 
-    def used_vacation(self, date_string=None):
+    def used_vacation(self, date_string: Optional[str] = None):
         return sum([year.used_vacation(date_string=date_string)
                     for year in self.years])
 
-    def vacation_left(self, date_string=None):
+    def vacation_left(self, date_string: Optional[str] = None):
         if date_string is None:
             if self.today() is None:
                 today = self.employed_date
@@ -175,7 +178,7 @@ class User(object):
 
         return int(unused_vacation_days)
 
-    def all_days(self):
+    def all_days(self) -> List[Day]:
         return [day for year in self.years
                 for month in year.months
                 for day in month.days]

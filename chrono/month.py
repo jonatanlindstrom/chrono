@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 
-import datetime
+from datetime import datetime, timedelta
 import re
+from typing import Optional
 
 from chrono import errors
 from chrono.day import Day, DayType
@@ -9,7 +10,7 @@ from chrono.time_utilities import pretty_timedelta
 
 
 class Month(object):
-    def __init__(self, month_string, user=None):
+    def __init__(self, month_string: str, user=None):
         match = re.match("^(\d{4})-([0-1][0-9])$", month_string)
         if match:
             self.year = int(match.group(1))
@@ -21,7 +22,7 @@ class Month(object):
         self.holidays = {}
         self.user = user
 
-    def add_day(self, date_string):
+    def add_day(self, date_string: str) -> Day:
         new_day = Day(date_string)
         if new_day.date.year != self.year or new_day.date.month != self.month:
             raise errors.ReportError("New date string didn't match month. "
@@ -37,7 +38,7 @@ class Month(object):
                                          "report for a previous day is "
                                          "incomplete.")
 
-        next_workday = datetime.datetime.strptime(
+        next_workday = datetime.strptime(
             self.next_workday(), "%Y-%m-%d").date()
 
         if new_day.date > next_workday:
@@ -56,21 +57,21 @@ class Month(object):
         return (not self.next_workday().startswith(date_string) and
                 self.days[-1].complete())
 
-    def next_workday(self):
+    def next_workday(self) -> str:
         if len(self.days) == 0:
             next_day = Day("{}-{:02d}-01".format(self.year, self.month))
         else:
             next_day = Day((self.days[-1].date +
-                            datetime.timedelta(days=1)).isoformat())
+                            timedelta(days=1)).isoformat())
 
         while (next_day.day_type != DayType.working_day or
                next_day.date.isoformat() in self.holidays):
             next_day = Day((next_day.date +
-                            datetime.timedelta(days=1)).isoformat())
+                            timedelta(days=1)).isoformat())
 
         return next_day.date.isoformat()
 
-    def next_month(self):
+    def next_month(self) -> str:
         next_year = self.year
         next_month = self.month + 1
         if next_month > 12:
@@ -78,22 +79,22 @@ class Month(object):
             next_year += 1
         return "{}-{:02d}".format(next_year, next_month)
 
-    def calculate_flextime(self):
-        flextime = datetime.timedelta()
+    def calculate_flextime(self) -> timedelta:
+        flextime = timedelta()
         for day in self.days:
             flextime += day.calculate_flextime()
         return flextime
 
-    def add_holiday(self, date_string, name):
+    def add_holiday(self, date_string: str, name: str):
         self.holidays[date_string] = name
         for day in self.days:
             if day.date.isoformat() == date_string:
                 day.day_type = DayType.holiday
                 day.info = name
 
-    def used_vacation(self, date_string=None):
+    def used_vacation(self, date_string: Optional[str] = None) -> int:
         if date_string is not None:
-            date = datetime.datetime.strptime(date_string, "%Y-%m-%d").date()
+            date = datetime.strptime(date_string, "%Y-%m-%d").date()
             vacation_days = [day for day in self.days
                              if day.day_type == DayType.vacation
                              and day.date <= date]
@@ -103,7 +104,7 @@ class Month(object):
 
         return len(vacation_days)
 
-    def sick_days(self):
+    def sick_days(self) -> int:
         return len([day for day in self.days
                     if day.day_type == DayType.sick_day])
 
@@ -111,7 +112,7 @@ class Month(object):
         width = 40
         month_string = "{month.year}-{month.month:02} - {name}".format(
             month=self,
-            name=datetime.datetime(self.year, self.month, 1).strftime("%B"))
+            name=datetime(self.year, self.month, 1).strftime("%B"))
 
         string = "\n{:^{width}}".format(month_string, width=width)
         string += "\n{}\n".format("-" * width)

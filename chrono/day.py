@@ -1,14 +1,16 @@
 # -*- coding: utf-8 -*-
 
-import datetime
-import re
+from datetime import datetime, timedelta
 from enum import Enum
+import re
+from typing import Optional
 
-from chrono.time_utilities import pretty_timedelta
 from chrono import errors
+from chrono.time_utilities import pretty_timedelta
 
 
 STANDARD_HOURS = 8
+
 
 class DayType(Enum):
     working_day = 1
@@ -17,11 +19,11 @@ class DayType(Enum):
     vacation = 4
     sick_day = 5
 
-
+    
 class Day(object):
-    def __init__(self, date_string):
+    def __init__(self, date_string: str):
         try:
-            self.date = datetime.datetime.strptime(
+            self.date = datetime.strptime(
                 date_string, "%Y-%m-%d").date()
 
         except ValueError:
@@ -35,28 +37,28 @@ class Day(object):
         self.end_time = None
         self.comment = None
         self.info = None
-        self.deviation = datetime.timedelta()
+        self.deviation = timedelta()
 
         if self.date.isoweekday() < 6:
             self.day_type = DayType.working_day
         else:
             self.day_type = DayType.weekend
 
-    def report_start_time(self, start_time):
+    def report_start_time(self, start_time: str):
         if self.start_time is not None:
             raise errors.ReportError("Date {} allready has a start time."
                                      .format(self.date.isoformat()))
 
         try:
-            start_time = datetime.datetime.strptime(
+            start_time = datetime.strptime(
                 start_time, "%H:%M").time()
         except ValueError:
             raise errors.BadTimeError(
                 "Bad start time: \"{}\".".format(start_time))
 
-        self.start_time = datetime.datetime.combine(self.date, start_time)
+        self.start_time = datetime.combine(self.date, start_time)
 
-    def report_lunch_duration(self, lunch_duration):
+    def report_lunch_duration(self, lunch_duration: str):
         if self.start_time is None:
             raise errors.ReportError(
                 "Date {} must have a start time before a lunch duration can "
@@ -68,14 +70,14 @@ class Day(object):
 
         match = re.match("^(\d{1,2})(?::(\d{2}))?$", lunch_duration)
         if match:
-            self.lunch_duration = datetime.timedelta(
+            self.lunch_duration = timedelta(
                 hours=int(match.group(1)), minutes=int(match.group(2) or 0))
         else:
             raise errors.ReportError(
                 "Bad lunch duration for date {}: '{}'".format(self.date,
                                                               lunch_duration))
 
-    def report_end_time(self, end_time):
+    def report_end_time(self, end_time: str):
         if self.start_time is None:
             raise errors.ReportError(
                 "Date {} must have a start time before an end time can be "
@@ -87,33 +89,33 @@ class Day(object):
                 "reported.".format(self.date.isoformat()))
 
         try:
-            end_time = datetime.datetime.strptime(
+            end_time = datetime.strptime(
                 end_time, "%H:%M").time()
 
         except TypeError:
             raise TypeError("Given end time must be a string.")
         except ValueError:
             raise errors.BadTimeError("Bad end time: \"{}\"".format(end_time))
-        self.end_time = datetime.datetime.combine(self.date, end_time)
+        self.end_time = datetime.combine(self.date, end_time)
 
-    def report_deviation(self, deviation):
+    def report_deviation(self, deviation: str):
         match = re.match("^(\d{1,2})(?::(\d{2}))?$", deviation)
         if match:
-            self.deviation = datetime.timedelta(
+            self.deviation = timedelta(
                 hours=int(match.group(1)), minutes=int(match.group(2) or 0))
         else:
             raise errors.ReportError("Bad deviation for date {}: '{}'".format(
                 self.date, deviation))
 
-    def report(self, start, lunch, end):
+    def report(self, start: str, lunch: str, end: str):
         self.report_start_time(start)
         self.report_lunch_duration(lunch)
         self.report_end_time(end)
 
-    def set_type(self, day_type):
+    def set_type(self, day_type: DayType):
         self.day_type = day_type
 
-    def complete(self):
+    def complete(self) -> bool:
         complete_status = (self.day_type != DayType.working_day or
                            self.start_time is not None and
                            self.lunch_duration is not None and
@@ -121,24 +123,23 @@ class Day(object):
 
         return complete_status
 
-    def expected_hours(self):
+    def expected_hours(self) -> timedelta:
         if self.day_type == DayType.working_day:
-            expected_hours = datetime.timedelta(hours=STANDARD_HOURS)
+            expected_hours = timedelta(hours=STANDARD_HOURS)
         else:
-            expected_hours = datetime.timedelta(hours=0)
+            expected_hours = timedelta(hours=0)
         return expected_hours
 
-    def worked_hours(self, end_time=None):
+    def worked_hours(self, end_time: Optional[datetime] = None) -> timedelta:
         """Calculate worked hours for a working day.
-        :type end_time datetime.datetime:  If the day has no end time, a custom
-                                           end time can be supplied.
-        :rtype: datetime.timedelta
+        :param end_time:  If the day has no end time, a custom end time can be
+                          supplied.
         :raises: errors.ChronoError
         """
         if end_time is None:
             if (self.start_time is None or self.lunch_duration is None or
                     self.end_time is None):
-                total_hours = datetime.timedelta()
+                total_hours = timedelta()
             else:
                 total_hours = self.end_time - self.start_time
                 total_hours -= self.lunch_duration
@@ -149,18 +150,18 @@ class Day(object):
                                          "on days in progress.")
             else:
                 total_hours = end_time - self.start_time
-                total_hours -= (self.lunch_duration or datetime.timedelta())
+                total_hours -= (self.lunch_duration or timedelta())
                 total_hours -= self.deviation
         return total_hours
 
-    def calculate_flextime(self):
+    def calculate_flextime(self) -> timedelta:
         if self.complete():
             flextime = self.worked_hours() - self.expected_hours()
         else:
-            flextime = datetime.timedelta()
+            flextime = timedelta()
         return flextime
 
-    def get_info(self):
+    def get_info(self) -> str:
         info = self.info
         if info:
             info = info.strip()
@@ -180,7 +181,7 @@ class Day(object):
         combined = " ".join([text for text in (info, self.comment) if text])
         return combined
 
-    def export(self):
+    def export(self) -> str:
         string = "{:>2}.".format(self.date.day)
         if self.start_time:
             string += " {}:{}".format(
@@ -198,7 +199,7 @@ class Day(object):
             string += " {}".format(self.comment)
         return string
 
-    def list_str(self):
+    def list_str(self) -> str:
         string = "{:<4}{:>2}.".format(self.date.strftime("%a"),
                                       self.date.day)
         if self.day_type == DayType.working_day:
@@ -241,7 +242,7 @@ class Day(object):
                 string += "{:>{width}}".format(value, width=width_value)
 
             string += "\n{:<{width}}".format("Deviation:", width=width_label)
-            if self.deviation > datetime.timedelta():
+            if self.deviation > timedelta():
                 value = pretty_timedelta(self.deviation)
                 string += "{:>{width}}".format(value, width=width_value)
 
@@ -257,7 +258,7 @@ class Day(object):
                 worked_hours = self.worked_hours()
             else:
                 worked_hours = self.worked_hours(
-                    end_time=datetime.datetime.now())
+                    end_time=datetime.now())
 
             value = pretty_timedelta(worked_hours)
 

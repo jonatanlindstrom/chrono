@@ -322,7 +322,7 @@ def draw_histogram(time_points: list, bin_width: int = 5, height: int = 20, stap
     return histogram_string
 
 
-def get_config(config_path):
+def get_config(config_path: str) -> configparser.ConfigParser:
     config = configparser.ConfigParser()
     config.read(config_path)
     if not config.has_section('Paths'):
@@ -330,7 +330,7 @@ def get_config(config_path):
     return config
 
 
-def write_config(config, config_path):
+def write_config(config, config_path: str):
     with open(config_path, 'w') as config_file:
         config.write(config_file)
 
