@@ -6,8 +6,7 @@
        chrono [options] report (lunch | deviation) <time>
        chrono [options] flex
        chrono [options] vacation
-       chrono [options] statistics ( start | lunch | end)
-       chrono [options] [--height=<height>][--bin-width=<width>] histogram ( start | end )
+       chrono [options] stats (start | end) [-w | -m | -y] [--hist [--height=<height>][--bin-width=<width>]]
        chrono [options] user
        chrono [options] edit [<month>]
        chrono -h | --help
@@ -15,6 +14,7 @@
 Options:
 --height=<height>             Height of histogram. [default: 20]
 --bin-width=<width>           Width in minutes of each bin. [default: 5]
+--hist                        Print histogram
 --set-data-folder=<folder>
 -v, --verbose
 """
@@ -28,6 +28,7 @@ import statistics as st
 import configparser
 import subprocess
 
+import math
 from docopt import docopt
 
 from chrono.parser import Parser
@@ -176,105 +177,28 @@ def main():
             print()
             print(parser.user)
             print()
-        elif arguments['statistics']:
+        elif arguments['stats']:
+            if arguments['-w']:
+                selected_period = parser.user.current_week().days
+            elif arguments['-m']:
+                selected_period = parser.user.current_month().days
+            elif arguments['-y']:
+                selected_period = parser.user.current_year().days
+            else:
+                selected_period = parser.user.all_days()
             if arguments['start']:
-                mornings = [
-                    datetime.timedelta(
-                        hours=d.start_time.hour,
-                        minutes=d.start_time.minute).total_seconds()
-                    for d in parser.user.all_days()
-                    if d.start_time is not None]
-                print("\nStart time")
-                print("-" * 25)
-                print("{:<20}{}".format(
-                    "Mean:", time.strftime(
-                        '%H:%M', time.gmtime(st.mean(mornings)))))
+                print_start_statistics(
+                    selected_period,
+                    histogram=arguments['--hist'],
+                    bin_width=int(arguments['--bin-width']),
+                    height=int(arguments['--height']))
 
-                print("{:<20}{}".format(
-                    "Median:", time.strftime(
-                        '%H:%M', time.gmtime(st.median(mornings)))))
-
-                print("{:<20}{}".format(
-                    "Standard deviation:", time.strftime(
-                        '%H:%M', time.gmtime(st.pstdev(mornings)))))
-
-                print("{:<20}{}".format(
-                    "Mode:", time.strftime(
-                        '%H:%M', time.gmtime(st.mode(mornings)))))
-
-                print("{:<20}{}".format(
-                    "Earliest:", time.strftime(
-                        '%H:%M', time.gmtime(min(mornings)))))
-
-                print("{:<20}{}".format(
-                    "Latest:", time.strftime(
-                        '%H:%M', time.gmtime(max(mornings)))))
-
-                print("-" * 25)
-                print("{} values".format(len(mornings)))
-                print()
             if arguments['end']:
-                evenings = [
-                    datetime.timedelta(
-                        hours=d.end_time.hour,
-                        minutes=d.end_time.minute).total_seconds()
-                    for d in parser.user.all_days()
-                    if d.end_time is not None]
-                print("\nEnd time")
-                print("-" * 25)
-                print("{:<20}{}".format(
-                    "Mean:", time.strftime(
-                        '%H:%M', time.gmtime(st.mean(evenings)))))
-
-                print("{:<20}{}".format(
-                    "Median:", time.strftime(
-                        '%H:%M', time.gmtime(st.median(evenings)))))
-
-                print("{:<20}{}".format(
-                    "Standard deviation:", time.strftime(
-                        '%H:%M', time.gmtime(st.pstdev(evenings)))))
-
-                print("{:<20}{}".format(
-                    "Mode:", time.strftime(
-                        '%H:%M', time.gmtime(st.mode(evenings)))))
-
-                print("{:<20}{}".format(
-                    "Earliest:", time.strftime(
-                        '%H:%M', time.gmtime(min(evenings)))))
-
-                print("{:<20}{}".format(
-                    "Latest:", time.strftime(
-                        '%H:%M', time.gmtime(max(evenings)))))
-
-                print("-" * 25)
-                print("{} values".format(len(evenings)))
-                print()
-        elif arguments['histogram']:
-            if arguments['start']:
-                values = [
-                        datetime.timedelta(
-                            hours=d.start_time.hour,
-                            minutes=d.start_time.minute).total_seconds() // 60
-                        for d in parser.user.all_days()
-                        if d.start_time is not None]
-                print("Start time")
-            elif arguments['end']:
-                values = [
-                        datetime.timedelta(
-                            hours=d.end_time.hour,
-                            minutes=d.end_time.minute).total_seconds() // 60
-                        for d in parser.user.all_days()
-                        if d.start_time is not None]
-                print("End time")
-            print()
-
-            print_histogram(
-                values,
-                bin_width=int(arguments['--bin-width']),
-                height=int(arguments['--height']))
-
-            print()
-
+                print_end_statistics(
+                    selected_period,
+                    histogram=arguments['--hist'],
+                    bin_width=int(arguments['--bin-width']),
+                    height=int(arguments['--height']))
 
         elif arguments['vacation']:
             print("Vacation left: {} / {}".format(
@@ -300,24 +224,103 @@ def main():
     if reconfigured:
         write_config(config, config_path)
 
-def print_histogram(values, start_time=7, end_time=20, bin_width=5, height=20, staple_character="|"):
+
+def print_end_statistics(time_period, histogram=False, bin_width=5, height=20):
+    evenings = [
+        datetime.timedelta(hours=day.end_time.hour, minutes=day.end_time.minute)
+        for day in time_period
+        if day.end_time is not None]
+
+    header = "End Time ({} - {})".format(min(time_period).date, max(time_period).date)
+    print()
+    print(statistics_for_time_points(evenings, header))
+    if histogram:
+        print()
+        print(draw_histogram(evenings, bin_width=bin_width, height=height))
+    print()
+
+
+def print_start_statistics(time_period, histogram=False, bin_width=5, height=20):
+    mornings = [
+        datetime.timedelta(hours=day.start_time.hour, minutes=day.start_time.minute)
+        for day in time_period
+        if day.start_time is not None]
+
+    header = "Start Time ({} - {})".format(min(time_period).date, max(time_period).date)
+    print()
+    print(statistics_for_time_points(mornings, header))
+    if histogram:
+        print()
+        print(draw_histogram(mornings, bin_width=bin_width, height=height))
+    print()
+
+
+def statistics_for_time_points(time_points: list, header: str) -> str:
+    time_in_seconds = [t.total_seconds() for t in time_points]
+
+    mean_time = time.strftime('%H:%M', time.gmtime(st.mean(time_in_seconds)))
+    median_time = time.strftime('%H:%M', time.gmtime(st.median(time_in_seconds)))
+    std_deviation = time.strftime('%H:%M', time.gmtime(st.pstdev(time_in_seconds)))
+    try:
+        mode_time = time.strftime('%H:%M', time.gmtime(st.mode(time_in_seconds)))
+    except st.StatisticsError:
+        mode_time = "-"
+    min_time = time.strftime('%H:%M', time.gmtime(min(time_in_seconds)))
+    max_time = time.strftime('%H:%M', time.gmtime(max(time_in_seconds)))
+
+    value_width = 5
+    key_width = len(header) - value_width
+
+    row_format = "\n{{:<{key_width}}}{{:>{value_width}}}".format(key_width=key_width, value_width=value_width)
+    delimiter = "\n" + "-" * len(header)
+
+    stats_string = header
+    stats_string += delimiter
+
+    stats_string += row_format.format("Mean:", mean_time)
+    stats_string += row_format.format("Median:", median_time)
+    stats_string += row_format.format("Standard deviation:", std_deviation)
+    stats_string += row_format.format("Mode:", mode_time)
+    stats_string += row_format.format("Earliest:", min_time)
+    stats_string += row_format.format("Latest:", max_time)
+    stats_string += delimiter
+    stats_string += "\n{} values".format(len(time_in_seconds))
+    return stats_string
+
+
+def draw_histogram(time_points: list, bin_width: int = 5, height: int = 20, staple_character: str = '▌') -> str:
+    values = [t.total_seconds() // 60 for t in time_points]
+
+    start_time = math.floor(min(time_points).seconds / 3600)
+    end_time = math.ceil(max(time_points).seconds / 3600)
+
     number_of_bins = int((end_time * 60 - start_time * 60) / bin_width)
     bins = []
     for i in range(number_of_bins):
         low = start_time * 60 + i * bin_width
         high = start_time * 60 + i * bin_width + bin_width
-        bins.append(len([t for t in values if t >= low and t < high]))
+        bins.append(len([t for t in values if low <= t < high]))
 
+    histogram_string = ""
     for n in range(height, 0, -1):
-        for bin in bins:
-            character = staple_character if bin / max(bins) * height >= n else " "
-            print("{}".format(character), end="")
-        print()
-    print("-" * number_of_bins)
+        for bin_values in bins:
+            character = staple_character if bin_values / max(bins) * height >= n else " "
+            histogram_string += "{}".format(character)
+        histogram_string += "\n"
+    axis = ""
+    scale = "\n"
     for n in range(start_time, end_time + 1):
-        width = int(number_of_bins / (end_time - start_time))
-        print("{:<{width}}".format(n, width=width), end="")
-    print()
+        if n < end_time:
+            width = int(number_of_bins / (end_time - start_time))
+            axis += "+" + "-" * (width - 1)
+            scale += "{:<{width}}".format(n, width=width)
+        else:
+            axis += "+"
+            scale += str(n)
+    histogram_string += axis
+    histogram_string += scale
+    return histogram_string
+
 
 def get_config(config_path):
     config = configparser.ConfigParser()

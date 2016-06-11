@@ -61,6 +61,10 @@ class Week:
                 tmp_week.sunday = tmp_day
         return tmp_week
 
+    @property
+    def days(self):
+        return [self.monday, self.tuesday, self.wednesday, self.thursday, self.friday, self.saturday, self.sunday]
+
     def calculate_flextime(self):
         flextime = datetime.timedelta()
         for weekday in (self.monday, self.tuesday, self.wednesday,
